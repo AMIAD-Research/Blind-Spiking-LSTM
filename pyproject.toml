@@ -1,0 +1,63 @@
+[build-system]
+requires = ["scikit-build-core>=0.5", "nanobind>=1.8,<2.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "cuTFHE"
+version = "0.1.0"
+description = "cuFFTDx bindings for JAX"
+requires-python = ">=3.12"
+dependencies = [
+    "jax[cuda12]>=0.9.0",
+    "numpy",
+    "flax",
+    "colorama",
+    "torch>=2.11.0",
+    "torchvision>=0.26.0",
+    "transformers>=5.9.0",
+    "datasets>=4.8.5",
+    "pandas>=3.0.3",
+]
+
+[tool.scikit-build]
+cmake.minimum-version = "3.18"
+cmake.build-type = "Release"
+sdist.include = ["third_party/nvidia-mathdx-25.12.0-cuda12/**",
+        "third_party/xla/**",]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "simple-parsing>=0.1.8",
+    "tabulate>=0.10.0",
+    "tqdm>=4.67.3",
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.ruff]
+line-length = 90
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E741", "E402"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

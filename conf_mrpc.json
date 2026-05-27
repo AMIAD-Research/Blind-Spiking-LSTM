@@ -1,0 +1,20 @@
+{
+    "name":"mrpc",
+    "submission_name":"MRPC",
+    "task":"Similarity and Paraphrase",
+    "input_name":["sentence1","sentence2"],
+    "output_name":"label",
+    "max_length":128,
+    "batch_size":32,
+    "tokenizer":"google/bert_uncased_L-2_H-768_A-12",
+    "input_dim":768,
+    "hidden_dim":256,
+    "n_epoch":15,
+    "lr":1e-3,
+    "metric":"f1_score",
+    "loss":"loss_fn_sim_par",
+    "dropout":0.2,
+    "n_lut":4
+    
+
+}
