@@ -36,13 +36,13 @@ def sample_sk(dict_params):
 
 
 def encrypt(m:Plaintext, sk:Plaintext,dict_params:dict,key:jnp.ndarray)->Ciphertext:
-    """Cette méthode permet d'encrypter un message en clair
+    """This method encrypts a cleartext message
 
     Args:
-        m (plaintext): plaintext de shape (K,1) avec K un entier arbitraire
+        m (plaintext): plaintext of shape (K,1) with K an arbitrary integer
 
     Returns:
-        torch.tensor: tenseur de taille (K,n+1). La première feature est la clé publique, la seconde est b
+        torch.tensor: tensor of size (K,n+1). The first feature is the public key, the second is b
     """
     
     degree = dict_params["degree"]
@@ -59,12 +59,12 @@ def decrypt(ciphertext:Ciphertext,sk:Plaintext, dict_params:dict )->Plaintext:
     """_summary_
 
     Args:
-        c (ciphertext): ciphertext à déchiffrer
-        sk (polynomial, optional): la clé privée à utiliser pour déchiffrer. Si égal à None, on utilise la clé contenue dans le schéma. Defaults to None.
-        divide_delta (bool, optional): Indique s'il on doit diviser par delta lors du déchiffrage. Defaults to True.
+        c (ciphertext): ciphertext to decrypt
+        sk (polynomial, optional): the private key to use for decryption. If None, the key contained in the scheme is used. Defaults to None.
+        divide_delta (bool, optional): Indicates whether to divide by delta during decryption. Defaults to True.
 
     Returns:
-        plaintext: Message clair
+        plaintext: Cleartext message
     """
     t = dict_params["t"]
     degree = dict_params["degree"]
@@ -100,13 +100,13 @@ def get_keyswitch_sk(new_sk:Plaintext, old_sk:Plaintext, dict_params:dict,key:jn
     return glev_sk
 
 def key_switch(key_switching_key:Ciphertext, ciphertext:Ciphertext,dict_params:dict )->Ciphertext:
-    """Cette fonction permet de changer de clé pour un message chiffré
+    """This function switches keys for an encrypted message
 
     Args:
-        new_sk (Plaintext): Nouvelle clé privée à utiliser
-        ciphertext (Ciphertext): Message chiffré par l'ancienne clé privée
-        old_sk (Plaintext): Ancienne clé privée
-        dict_params (dict): Dictionnaire regroupant les méta-paramètres du chiffrement
+        new_sk (Plaintext): New private key to use
+        ciphertext (Ciphertext): Message encrypted with the old private key
+        old_sk (Plaintext): Old private key
+        dict_params (dict): Dictionary grouping the encryption's meta-parameters
 
     Returns:
         _type_: _description_
@@ -127,12 +127,12 @@ def key_switch(key_switching_key:Ciphertext, ciphertext:Ciphertext,dict_params:d
 
  
 def get_RGSW(sk:jnp.ndarray, polynomial:Plaintext, dict_params:dict, key:jnp.ndarray)->RGSW:
-    """Cette fonction permet de calculer le RGSW d'un plaintex
+    """This function computes the RGSW of a plaintext
 
     Args:
-        sk (jnp.ndarray): Clé privée
-        polynomial (Plaintext): Plaintext à transformer en RGSW
-        dict_params (dict): Dictionnaire regroupant les méta-paramètres du chiffrement
+        sk (jnp.ndarray): Private key
+        polynomial (Plaintext): Plaintext to transform into RGSW
+        dict_params (dict): Dictionary grouping the encryption's meta-parameters
 
     Returns:
         RGSW: _description_
@@ -153,12 +153,12 @@ def get_RGSW(sk:jnp.ndarray, polynomial:Plaintext, dict_params:dict, key:jnp.nda
 
 
 def get_boostrapping_key(sk_lut:jnp.ndarray, sk_lwe:jnp.ndarray, dict_params:dict,key:jnp.ndarray)->RGSW:
-    """Cette fonction calcule la clés de bootstrappint
+    """This function computes the bootstrapping key
 
     Args:
-        sk_lut (jnp.ndarray): Clé privée de la LUT
-        sk_lwe (jnp.ndarray): Clé privée du chiffré en entrée du bootstrapping
-        dict_params (dict): Ensemble des paramètres permettant de calculer les chiffrements
+        sk_lut (jnp.ndarray): Private key of the LUT
+        sk_lwe (jnp.ndarray): Private key of the ciphertext at the input of the bootstrapping
+        dict_params (dict): Set of parameters allowing the encryptions to be computed
         key (jnp.ndarray): randomness
 
     Returns:
@@ -188,11 +188,11 @@ def get_boostrapping_key(sk_lut:jnp.ndarray, sk_lwe:jnp.ndarray, dict_params:dic
     return left_part_rgsw,right_part_rgsw
 
 def get_boostrapping_key_collapse(sk_poly:jnp.ndarray, sk_lwe:jnp.ndarray, dict_params:dict,key:jnp.ndarray,collapse:int)->RGSW:
-    """Cette fonction permet de calculer la clé de bootstrapping avec le collapse
+    """This function computes the bootstrapping key with the collapse
     Args:
-        sk (jnp.ndarray): Clé privée
-        polynomial (Plaintext): Plaintext à transformer en RGSW
-        dict_params (dict): Dictionnaire regroupant les méta-paramètres du chiffrement
+        sk (jnp.ndarray): Private key
+        polynomial (Plaintext): Plaintext to transform into RGSW
+        dict_params (dict): Dictionary grouping the encryption's meta-parameters
 
     Returns:
         RGSW: _description_
@@ -260,19 +260,19 @@ def get_galois_key(sk,dict_params,key):
 @partial(jax.jit,static_argnames=['q','beta','l','degree','collapse','n_lut'])
 def bootstrapping(lwe_ciphertext:Ciphertext,LUT:Ciphertext,BSK:RGSW,
                     q:int,beta:int,l:int,degree:int, collapse:int, all_rot_fft:jnp.array=None, n_lut:int=1):
-    """Cette fonction permet de réaliser un boostrapping fonctionnel sur une LWE ciphertext
+    """This function performs a functional bootstrapping on an LWE ciphertext
 
     Args:
-        lwe_ciphertext (Ciphertext): LWE ciphertext 
-        LUT (Ciphertext): Look-Up Table. Polynôme chiffré de la fonction de loop-up table
-        BSK (RGSW): Clé de bootstrapping
-        q (int): modulo d'entré du message chiffré lwe
-        degree (int): Degré du polynôme de la LUT
-        beta (int): Base de décomposition
-        l (int): PUissance, on a la relation beta**l=q si on veut une décomposition parfaite
+        lwe_ciphertext (Ciphertext): LWE ciphertext
+        LUT (Ciphertext): Look-Up Table. Encrypted polynomial of the look-up table function
+        BSK (RGSW): Bootstrapping key
+        q (int): input modulus of the encrypted lwe message
+        degree (int): Degree of the LUT polynomial
+        beta (int): Decomposition base
+        l (int): Power, we have the relation beta**l=q if we want a perfect decomposition
 
     Returns:
-        lwe_ciphertext(Ciphertext): Message chiffrant l'image par la fonction de la LUT du message lwe d'entré 
+        lwe_ciphertext(Ciphertext): Message encrypting the image, by the LUT's function, of the input lwe message
     """
 
     ctMS = lwe_ciphertext

@@ -4,9 +4,9 @@
 
 using namespace cufftdx;
 
-// Calcul dynamique de l'ElementsPerThread optimal à la compilation.
-// On garantit que la taille du bloc (N / EPT) ne dépasse jamais 512 threads.
-// Cela permet d'allouer 128 registres par thread, empêchant le crash sur L=3 ou L=4.
+// Dynamic computation of the optimal ElementsPerThread at compile time.
+// We guarantee that the block size (N / EPT) never exceeds 512 threads.
+// This allows allocating 128 registers per thread, preventing the crash on L=3 or L=4.
 template <int N>
 constexpr unsigned int optimal_ept() {
     return (N >= 1024) ? (N / 512) : 2;

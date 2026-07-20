@@ -45,15 +45,15 @@ class LSTMCell(nnx.Module):
 
 
 
-        # 1. Pré-allocation du tenseur de sortie (indispensable avec fori_loop)
+        # 1. Pre-allocation of the output tensor (essential with fori_loop)
         out_h = jnp.zeros((self.max_len, self.hidden_dim))
         out_c = jnp.zeros((self.max_len, self.hidden_dim))
 
 
-        # 3. Fonction interne avec la signature attendue (index, état)
+        # 3. Internal function with the expected signature (index, state)
         def body_fun(i, val):
             h, c, out_h, out_c = val
-            x_t = x[i]  # Extraction explicite du pas de temps
+            x_t = x[i]  # Explicit extraction of the time step
             
             hx = jnp.concat([x_t, h], axis=-1)
             
@@ -71,11 +71,11 @@ class LSTMCell(nnx.Module):
                 self.spike(o_t,0.,1.,self.gammao[k]) for k in range(self.n_lut)
             ])
                 
-            # Calcul des états suivants (à ajuster selon ta logique spiking exacte)
+            # Computation of the next states (to adjust according to your exact spiking logic)
             c_next = f_t * c + i_t 
             h_next = o_t * c_next
 
-            # 4. Stockage en place via dynamic_update_slice (compilé en in-place par XLA)
+            # 4. In-place storage via dynamic_update_slice (compiled in-place by XLA)
             out_h = out_h.at[i].set(h_next)
             out_c = out_c.at[i].set(c_next)
             return h_next, c_next, out_h, out_c
@@ -97,11 +97,11 @@ class LSTMCell(nnx.Module):
         out_c = jnp.zeros((self.max_len, self.hidden_dim))
 
 
-        # 3. Fonction interne avec la signature attendue (index, état)
+        # 3. Internal function with the expected signature (index, state)
         def body_fun(i, val):
             h, c, out_h, out_c = val
-            x_t = x[i]  # Extraction explicite du pas de temps
-            
+            x_t = x[i]  # Explicit extraction of the time step
+
             hx = jnp.concat([x_t, h], axis=-1)
             HX = jnp.round(hx*beta_x)
             f_t = self.linearf.qforward(HX,beta_w,q,self.sf)*4
@@ -131,11 +131,11 @@ class LSTMCell(nnx.Module):
             f_t = f_t * (1-index_f_sup - index_f_inf) - 0 * index_f_sup - 1 * index_f_inf
             i_t = i_t * (1-index_i_sup - index_i_inf) - 0 * index_i_sup - jnp.concat(self.eta) * index_i_inf
             o_t = o_t * (1-index_o_sup - index_o_inf) - 0 * index_o_sup - 1 * index_o_inf
-            # Calcul des états suivants (à ajuster selon ta logique spiking exacte)
+            # Computation of the next states (to adjust according to your exact spiking logic)
             c_next = f_t * c + noise_output[i,0] + i_t + noise_output[i,1]
             h_next = o_t * c_next + noise_output[i,2]
 
-            # 4. Stockage en place via dynamic_update_slice (compilé en in-place par XLA)
+            # 4. In-place storage via dynamic_update_slice (compiled in-place by XLA)
             out_h = out_h.at[i].set(h_next)
             out_c = out_c.at[i].set(c_next)
             return h_next, c_next, out_h, out_c

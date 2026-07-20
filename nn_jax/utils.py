@@ -95,14 +95,14 @@ def loss_fn_sim_par(model, batch):
 @jax.jit
 def f1_score(logits, labels):
   """
-  Calcule le F1-score pour une classification binaire.
-  
+  Computes the F1-score for a binary classification.
+
   Args:
-      logits: Les sorties brutes du modèle (avant sigmoid).
-      labels: Les étiquettes réelles (0 ou 1).
-      threshold: Le seuil de décision pour la classification.
+      logits: The raw outputs of the model (before sigmoid).
+      labels: The actual labels (0 or 1).
+      threshold: The decision threshold for the classification.
   """
-  # Conversion des logits en prédictions binaire
+  # Conversion of the logits into binary predictions
   logits = logits.astype(jnp.bool_)
   labels = labels.astype(jnp.bool_)
   
@@ -119,30 +119,30 @@ def f1_score(logits, labels):
 @jax.jit
 def mcc(logits, labels):
   """
-  Calcule le coefficient de corrélation de Matthews (MCC).
-  
+  Computes the Matthews correlation coefficient (MCC).
+
   Args:
-      logits: Sorties brutes du modèle (avant activation).
-      labels: Étiquettes réelles (0 ou 1).
-      threshold: Seuil de classification.
+      logits: Raw outputs of the model (before activation).
+      labels: Actual labels (0 or 1).
+      threshold: Classification threshold.
   """
   preds = logits.astype(jnp.bool_)
   labels = labels.astype(jnp.bool_)
   
-  # Calcul des quatre composantes de la matrice de confusion
+  # Computing the four components of the confusion matrix
   tp = jnp.sum(jnp.logical_and(preds == True,  labels == True))
   tn = jnp.sum(jnp.logical_and(preds == False, labels == False))
   fp = jnp.sum(jnp.logical_and(preds == True,  labels == False))
   fn = jnp.sum(jnp.logical_and(preds == False, labels == True))
   
-  # Calcul du numérateur
+  # Computing the numerator
   numerator = (tp * tn) - (fp * fn)
-  
-  # Calcul du dénominateur avec précaution pour éviter la division par zéro
-  # On utilise jnp.prod pour plus de clarté dans l'expression
+
+  # Computing the denominator carefully to avoid division by zero
+  # We use jnp.prod for more clarity in the expression
   denominator = jnp.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-  
-  # JAX gère les NaNs, mais on assure la stabilité
+
+  # JAX handles NaNs, but we ensure stability
   return jnp.where(denominator == 0, 0.0, numerator / denominator).mean()
 
 @jax.jit
