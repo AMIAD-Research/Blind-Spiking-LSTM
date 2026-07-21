@@ -26,12 +26,12 @@ def jax_inversefourier(q):
 
 @partial(jax.jit, static_argnames=['stay_fft'])
 def fft_polynomial_multiply(poly1, poly2,stay_fft=False):
-    """Fonction estimant la multiplication cyclotomic exacte entre deux polynôme
+    """Function estimating the exact cyclotomic multiplication between two polynomials
 
     Args:
-        poly1 (jnp.ndarray): Polynôme 1
-        poly2 (jnp.ndarray): Polynôme 2
-        degree (jnp.ndarray): Degré des polynôme
+        poly1 (jnp.ndarray): Polynomial 1
+        poly2 (jnp.ndarray): Polynomial 2
+        degree (jnp.ndarray): Degree of the polynomials
 
     Returns:
         jnp.ndarray: poly1*poly2
@@ -66,12 +66,12 @@ def partial_fft_product(poly1, fft_poly2, fft_poly3, stay_fft = False):
 
 @partial(jax.jit, static_argnames=['degree'])
 def exact_polynomial_multiply(poly1, poly2,degree):
-    """Fonction calculant la multiplication cyclotomic exacte entre deux polynôme
+    """Function computing the exact cyclotomic multiplication between two polynomials
 
     Args:
-        poly1 (jnp.ndarray): Polynôme 1
-        poly2 (jnp.ndarray): Polynôme 2
-        degree (jnp.ndarray): Degré des polynôme
+        poly1 (jnp.ndarray): Polynomial 1
+        poly2 (jnp.ndarray): Polynomial 2
+        degree (jnp.ndarray): Degree of the polynomials
 
     Returns:
         jnp.ndarray: poly1*poly2
@@ -115,17 +115,17 @@ def decomposition(gamma, beta, l,q):
 
 @partial(jax.jit, static_argnames=['beta','l','q'])
 def GLEV_polynomial(x:jnp.ndarray,beta:int,l:int,q:int):
-    """Fonction permettant de calculer des polynômes pour le GLWE avant le chiffrement de celui-ci
+    """Function used to compute polynomials for the GLWE before encrypting it
 
     Args:
-        x (jnp.ndarray): polynôme
-        beta (int): base de décomposition
-        l (int): Puissance maximale de décomposition
-        q (int): Modulus des chiffrés
-        degree (int): Degré du polynôme
+        x (jnp.ndarray): polynomial
+        beta (int): decomposition base
+        l (int): Maximum decomposition power
+        q (int): Modulus of the ciphertexts
+        degree (int): Degree of the polynomial
 
     Returns:
-        jnp.ndarray: l polynômes
+        jnp.ndarray: l polynomials
     """
     #decomp_basis = jnp.round(jnp.expand_dims(q*jnp.power(1/beta,power),1))
     decomp_basis = jnp.array([q/(beta**i) for i in range(1,l+1)])
@@ -136,13 +136,13 @@ def GLEV_polynomial(x:jnp.ndarray,beta:int,l:int,q:int):
 
 @jax.jit
 def weights_to_polynomial(weights):
-    """Fonction permettant transformant les poids d'une couche linéaire en un polynôme
+    """Function transforming the weights of a linear layer into a polynomial
 
     Args:
-        weights (jnp.ndarray): Poids W
+        weights (jnp.ndarray): Weights W
 
     Returns:
-        jnp.ndarray: Polynôme issu des poids linéaires
+        jnp.ndarray: Polynomial derived from the linear weights
     """
     polynomial = -jnp.flip(weights.flatten(),axis=-1)
     polynomial = polynomial.at[-1].set(weights[0])
@@ -150,14 +150,14 @@ def weights_to_polynomial(weights):
 
 @jax.jit
 def coef_rotation(polynomial:jnp.array, alpha):
-    """Cette fonction applique une rotation des coefficients d'un polynôme par l'entier alpha
+    """This function applies a rotation of a polynomial's coefficients by the integer alpha
 
     Args:
-        polynomial (jnp.array): Un polynôme
-        alpha (_type_): Exposant de rotation
+        polynomial (jnp.array): A polynomial
+        alpha (_type_): Rotation exponent
 
     Returns:
-        jnp.ndarray: Polynôme après rotation
+        jnp.ndarray: Polynomial after rotation
     """
     n = polynomial.shape[-1]
     rotation = jnp.roll(polynomial,alpha)
@@ -177,24 +177,24 @@ def apply_automorphism(polynomial:jnp.array, alpha):
     #     return new_p
     N = polynomial.shape[0]
     
-    # 1. Calcul des indices de destination dans Z_{2N}
-    # k et N étant statiques (N est déduit de la shape), 
-    # XLA résout cette équation à la compilation.
+    # 1. Computing the destination indices in Z_{2N}
+    # k and N being static (N is deduced from the shape),
+    # XLA resolves this equation at compile time.
     indices_2n = (jnp.arange(N) * alpha) % (2 * N)
-    
-    # 2. Séparation des indices purs (modulo N)
+
+    # 2. Separation of the pure indices (modulo N)
     target_indices = indices_2n % N
-    
-    # 3. Gestion du changement de signe (X^N = -1)
-    # L'opposé modulaire de poly sans risque d'underflow sur des uint.
+
+    # 3. Handling the sign change (X^N = -1)
+    # The modular opposite of poly without risk of underflow on uints.
     poly_neg = -polynomial
-    
-    # Si l'indice 2N dépasse N, le terme a fait un "tour" et prend un signe négatif.
+
+    # If the index 2N exceeds N, the term has done a "wrap-around" and takes a negative sign.
     poly_signed = jnp.where(indices_2n >= N, poly_neg, polynomial)
-    
-    # 4. Permutation des coefficients (Scatter)
-    # En JAX, ce scatter vectorisé sur des indices constants sera compilé 
-    # par XLA en une permutation pure en mémoire (très rapide).
+
+    # 4. Permutation of the coefficients (Scatter)
+    # In JAX, this vectorized scatter on constant indices will be compiled
+    # by XLA into a pure in-memory permutation (very fast).
     new_poly = jnp.zeros_like(polynomial)
     new_poly = new_poly.at[target_indices].set(poly_signed)
     

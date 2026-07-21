@@ -10,15 +10,15 @@ from jax import vmap
 
 
 def encrypt_LWE(m:Plaintext, sk:jnp.ndarray,dict_params:dict,key:jnp.ndarray)->Ciphertext:
-    """Fonction pour calculer le chiffrement LWE d'un plaintext m grâce à la clé privée sk
+    """Function to compute the LWE encryption of a plaintext m using the private key sk
 
     Args:
-        m (Plaintext): Message à chiffrer
-        sk (Plaintext): Clé privée
-        dict_params (dict): Dictionnaire regroupant les méta-paramètres du chiffrement
+        m (Plaintext): Message to encrypt
+        sk (Plaintext): Private key
+        dict_params (dict): Dictionary grouping the encryption's meta-parameters
 
     Returns:
-        Ciphertext: Message chiffré
+        Ciphertext: Encrypted message
     """
     N = dict_params["degree"]
     q = dict_params["q"]
@@ -31,15 +31,15 @@ def encrypt_LWE(m:Plaintext, sk:jnp.ndarray,dict_params:dict,key:jnp.ndarray)->C
     return public_key,b
 
 def decrypt_LWE(ciphertext:Ciphertext,sk:Plaintext, dict_params:dict )->Plaintext:
-    """Cette fonction déchiffre un chiffré
+    """This function decrypts a ciphertext
 
     Args:
-        c (ciphertext): ciphertext à déchiffrer
-        sk (polynomial, optional): la clé privée à utiliser pour déchiffrer. 
-        dict_params (dict): Dictionnaire regroupant les méta-paramètres du chiffrement
+        c (ciphertext): ciphertext to decrypt
+        sk (polynomial, optional): the private key to use for decryption.
+        dict_params (dict): Dictionary grouping the encryption's meta-parameters
 
     Returns:
-        plaintext: Message clair
+        plaintext: Cleartext message
     """
     t = dict_params["t"]
     delta = dict_params["q"]/t
@@ -67,16 +67,16 @@ def decrypt_LWE_quantization(ciphertext:Ciphertext, sk:Plaintext, dict_params:di
 
 @partial(jax.jit, static_argnames=['q'])
 def gadget_product_LWE(glev:Ciphertext, decomp:Plaintext,q:int)->Ciphertext:
-    """Cette fonction fonction applique le produit lié à la gadget décomposition.
+    """This function applies the product related to the gadget decomposition.
 
     Args:
-        glev (Ciphertext): Chiffré en GLEV
-        decomp (Plaintext): Plaintext décomposé suivant une base beta
-        q (int): Modulo de l'espace des chiffrés
-        degree (int): Degré des polynômes de glev
+        glev (Ciphertext): Ciphertext in GLEV
+        decomp (Plaintext): Plaintext decomposed following a base beta
+        q (int): Modulus of the ciphertext space
+        degree (int): Degree of the glev polynomials
 
     Returns:
-        Ciphertext: Résultat du produit (proche d'un produit scalaire)
+        Ciphertext: Result of the product (close to a scalar product)
     """
     glev_public_key, glev_b = glev[0],glev[1]
     public_key_sum = centered_mod(jnp.tensordot(decomp,glev_public_key),q)
@@ -98,13 +98,13 @@ def get_keyswitch_sk_LWE(new_sk:Plaintext, old_sk:Plaintext, dict_params:dict,ke
 
 
 def key_switch_LWE(key_switching_key:Ciphertext, ciphertext:Ciphertext,dict_params:dict )->Ciphertext:
-    """Cette fonction permet de changer de clé pour un message chiffré
+    """This function switches keys for an encrypted message
 
     Args:
-        new_sk (Plaintext): Nouvelle clé privée à utiliser
-        ciphertext (Ciphertext): Message chiffré par l'ancienne clé privée
-        old_sk (Plaintext): Ancienne clé privée
-        dict_params (dict): Dictionnaire regroupant les méta-paramètres du chiffrement
+        new_sk (Plaintext): New private key to use
+        ciphertext (Ciphertext): Message encrypted with the old private key
+        old_sk (Plaintext): Old private key
+        dict_params (dict): Dictionary grouping the encryption's meta-parameters
 
     Returns:
         _type_: _description_

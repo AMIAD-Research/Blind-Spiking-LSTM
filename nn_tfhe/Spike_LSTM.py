@@ -25,11 +25,11 @@ class Linear(nnx.Module):
         
     
     def set_weights(self, W:jax.Array,B:jax.Array):# B:jax.Array):
-        """Cette fonction prend les poids d'un couche linéaire fonctionnant sur des données claires et mets en place les poids pour la 
-        couche linéaire
+        """This function takes the weights of a linear layer operating on cleartext data and sets up the weights for the
+        linear layer
 
         Args:
-            W (jax.Array): Weights 
+            W (jax.Array): Weights
         """
 
         weight_poly1 = (vmap(weights_to_polynomial, in_axes=0)(jnp.round(self.factor[:,None]*W.transpose())))
@@ -44,16 +44,16 @@ class Linear(nnx.Module):
 
     
     def __call__(self, x:Ciphertext):
-        """Fonction qui applique une couche linéaire sur des données homomorphiques
+        """Function that applies a linear layer on homomorphic data
 
         Args:
-            x (Ciphertext): Données chiffrées de shape [(degree),(degree)]
-        Renvoie un LWE [(hidden_size,degree),(hidden_size)]
+            x (Ciphertext): Encrypted data of shape [(degree),(degree)]
+        Returns an LWE [(hidden_size,degree),(hidden_size)]
         """
-        ##Multiplication des polynômes
+        ##Multiplication of the polynomials
         h1_cipher = vmap(multiply_plaintext_ciphertext,in_axes=(0,None,None,None))(self.kernel_polynomial, x, self.dict_params["degree"], False)
-        
-        ##Extraction du premier coefficient qui correspond à l'hidden layer
+
+        ##Extraction of the first coefficient corresponding to the hidden layer
         h1_cipher_extract = vmap(sample_extract,in_axes=(0,None))(h1_cipher,0)
         #breakpoint()
         h1_cipher_extract = vmap(sum_plaintext_to_ciphertext,(0,0))(self.bias,h1_cipher_extract)
@@ -101,15 +101,15 @@ class CipherSpikeLSTM:
 
 
     def __call__(self, x,seq_len):
-        # Initialisation des états cachés (le "carry" initial)
+        # Initialization of the hidden states (the initial "carry")
         H_0 = (jnp.zeros(self.dict_params["degree"]), jnp.zeros(self.dict_params["degree"]))
         C_0 = (jnp.zeros(self.dict_params["degree"]), jnp.zeros(self.dict_params["degree"]))
         init_carry = (H_0, C_0)
-        # Définition de la fonction qui sera exécutée à chaque pas de temps
+        # Definition of the function that will be executed at each time step
         def scan_step(carry, x_t):
             H, C = carry
-            
-            # --- Début de ton pas de calcul TFHE ---
+
+            # --- Start of your TFHE computation step ---
             dim = jnp.arange(self.hidden_dim)
             C_lwe = vmap(sample_extract, (None, 0))(C, dim)
             C_lwe_reshape = (
@@ -136,7 +136,7 @@ class CipherSpikeLSTM:
             #breakpoint()
             boot = self.heavyBS.cuboot(input_boot, lut_boot)
             
-            # Application de tes redimensionnements
+            # Applying your reshaping
             spike_I = [
                 jnp.permute_dims(boot[0][self.hidden_dim // self.n_lut:], (1, 0, 2)).reshape(-1, self.degree_lut),
                 jnp.permute_dims(boot[1][self.hidden_dim // self.n_lut:], (1, 0, 2)).reshape(-1, 1)
@@ -169,15 +169,15 @@ class CipherSpikeLSTM:
             C_t = self.heavyBS.packing(C_t)
             H_t = self.heavyBS.packing(H_t)
             H_t = rotate_ciphertext(H_t, self.input_dim)
-            # --- Fin de ton pas de calcul ---
+            # --- End of your computation step ---
 
             new_carry = (H_t, C_t)
-            
-            # On retourne le nouvel état ET ce que l'on veut empiler pour l'historique
+
+            # We return the new state AND what we want to stack for the history
             return new_carry, (H_t, C_t)
 
-        # Exécution de la boucle optimisée par XLA
-        # jax.lax.scan va itérer automatiquement sur la première dimension de 'x' (le temps)
+        # Execution of the XLA-optimized loop
+        # jax.lax.scan will automatically iterate over the first dimension of 'x' (time)
         final_carry, final_outputs = jax.lax.scan(scan_step, init_carry, x)
         
         return final_carry, final_outputs

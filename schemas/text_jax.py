@@ -11,14 +11,14 @@ jax.config.update('jax_enable_x64', True)
 
 @jax.jit
 def sum_plaintext_to_ciphertext(plaintext:Plaintext,ciphertext:Ciphertext):
-    """Cette fonction permet d'additionner un message clair par un message chiffré
+    """This function adds a cleartext message to an encrypted message
 
     Args:
-        plaintext (Plaintext): Message clair
-        ciphertext (Ciphertext): Message chiffré
+        plaintext (Plaintext): Cleartext message
+        ciphertext (Ciphertext): Encrypted message
 
     Returns:
-        Ciphertext: Message chiffré
+        Ciphertext: Encrypted message
     """
     return ciphertext[0], ciphertext[1]+plaintext
 
@@ -26,12 +26,12 @@ def sum_plaintext_to_ciphertext(plaintext:Plaintext,ciphertext:Ciphertext):
 
 @partial(jax.jit, static_argnames=['q','modulo'])
 def sum_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,q:int,modulo=True)->Ciphertext:
-    """Cette fonction calcule la somme de deux ciphertexts.
+    """This function computes the sum of two ciphertexts.
 
     Args:
         ciphertext1 (Ciphertext): Ciphertext1
         ciphertext2 (Ciphertext): Ciphertext2
-        q (int): Modulo de l'espace des chiffrés
+        q (int): Modulus of the ciphertext space
 
     Returns:
         Ciphertext: Ciphertext1+ciphertext2
@@ -44,12 +44,12 @@ def sum_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,q:i
 
 @partial(jax.jit, static_argnames=['q'])
 def diff_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,q:int)->Ciphertext:
-    """Cette fonction calcule la différence entre 2 ciphertexts.
+    """This function computes the difference between 2 ciphertexts.
 
     Args:
         ciphertext1 (Ciphertext): Ciphertext1
         ciphertext2 (Ciphertext): Ciphertext2
-        q (int): Modulo de l'espace des chiffrés
+        q (int): Modulus of the ciphertext space
 
     Returns:
         Ciphertext: ciphertext1 - ciphertext2
@@ -58,10 +58,10 @@ def diff_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,q:
 
 @partial(jax.jit,static_argnames=["q"])
 def centered_mod_ciphertext(ciphertext:Ciphertext,q:int):
-    """Cette fonction renvoie le modulo centré de q d'un message chiffré
+    """This function returns the centered modulo q of an encrypted message
 
     Args:
-        ciphertext (Ciphertext): Message chiffré
+        ciphertext (Ciphertext): Encrypted message
         q (int): modulus
 
     Returns:
@@ -72,7 +72,7 @@ def centered_mod_ciphertext(ciphertext:Ciphertext,q:int):
 
 @partial(jax.jit, static_argnames=['stay_fft'])
 def multiply_plaintext_plaintext(plaintext1:Plaintext, plaintext2:Plaintext,  stay_fft=False)->Plaintext:
-    """Multiplication entre deux messages clairs.
+    """Multiplication between two cleartext messages.
 
     Args:
         plaintext1 (Plaintext): _description_
@@ -86,15 +86,15 @@ def multiply_plaintext_plaintext(plaintext1:Plaintext, plaintext2:Plaintext,  st
 
 @partial(jax.jit, static_argnames=['degree','stay_fft','ciphertext_fft'])
 def multiply_plaintext_ciphertext(plaintext:Plaintext,ciphertext:Ciphertext,degree:int, stay_fft:bool=False, ciphertext_fft:bool=False)->Ciphertext:
-    """Multiplication d'un message ciphertext par un message plaintext.
+    """Multiplication of a ciphertext message by a plaintext message.
 
     Args:
-        plaintext (Plaintext): Message clair
-        ciphertext (Ciphertext): Message chiffré
-        degree (int): Degré polynôme
+        plaintext (Plaintext): Cleartext message
+        ciphertext (Ciphertext): Encrypted message
+        degree (int): Polynomial degree
 
     Returns:
-        Ciphertext: Message chiffré
+        Ciphertext: Encrypted message
     """
     public_key, b = ciphertext[0],ciphertext[1]
     if degree == 1:
@@ -111,18 +111,18 @@ def multiply_plaintext_ciphertext(plaintext:Plaintext,ciphertext:Ciphertext,degr
 #@partial(jax.jit,static_argnames=['q','beta','l','degree','rgsw_fft'])
 def multiply_ciphertext_RGSW(ciphertext:Ciphertext, RGSW:RGSW,
                                 q:int,beta:int,l:int,degree:int, rgsw_fft:bool=False)->Ciphertext:
-    """Cette fonction multiplie un ciphertext avec un RGSW et renvoie un chiffré RLWE.
+    """This function multiplies a ciphertext with an RGSW and returns an RLWE ciphertext.
 
     Args:
-        ciphertext (Ciphertext): Chiffré en RLWE, RLWE(m1)
-        RGSW (RGSW): Chiffré en RGSW, RGSW(m2)
-        q (int): Modulo de l'espace des chiffrés
-        beta (int): Base de décomposition
-        l (int): Puissance maximale de décomposition
-        degree (int): Degré des polynômes
+        ciphertext (Ciphertext): Ciphertext in RLWE, RLWE(m1)
+        RGSW (RGSW): Ciphertext in RGSW, RGSW(m2)
+        q (int): Modulus of the ciphertext space
+        beta (int): Decomposition base
+        l (int): Maximum decomposition power
+        degree (int): Degree of the polynomials
 
     Returns:
-        Ciphertext: Chiffré RLWE(m1*m2)
+        Ciphertext: RLWE(m1*m2) ciphertext
     """
     cipher_stacked = jnp.stack(ciphertext)
     dec = vmap(decomposition,(0,None,None,None))(cipher_stacked, beta, l, q)
@@ -148,16 +148,16 @@ def multiply_ciphertext_RGSW(ciphertext:Ciphertext, RGSW:RGSW,
 @partial(jax.jit,static_argnames=['q','beta','l','degree'])
 def multiply_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,glev_s_quare:Ciphertext,
                                    degree:int,q:int,beta:int,l:int,delta:int)->Ciphertext:
-    """Cette fonction permet de multiplier deux chiffrés entre eux.
+    """This function multiplies two ciphertexts together.
 
     Args:
         ciphertext1 (Ciphertext): Ciphertext1, RLWE(delta*m1)
         ciphertext2 (Ciphertext): Ciphertext2, RLWE(delta*m2)
-        RGSW_sk (RGSW): Clé secrète chiffré en RGSW
-        degree (int): Degré des polynômes
-        q (int): Modulo de l'espace des chiffrés
-        beta (int): Base de décomposition
-        l (int): Puissance maximale de décomposition
+        RGSW_sk (RGSW): Secret key encrypted in RGSW
+        degree (int): Degree of the polynomials
+        q (int): Modulus of the ciphertext space
+        beta (int): Decomposition base
+        l (int): Maximum decomposition power
 
     Returns:
         Ciphertext: RLWE(delta*m1*m2)
@@ -179,16 +179,16 @@ def multiply_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertex
 
 @partial(jax.jit, static_argnames=['degree','glev_fft'])
 def gadget_product(glev:Ciphertext, decomp:Plaintext,  degree:int, glev_fft:bool=False)->Ciphertext:
-    """Cette fonction fonction applique le produit lié à la gadget décomposition.
+    """This function applies the product related to the gadget decomposition.
 
     Args:
-        glev (Ciphertext): Chiffré en GLEV
-        decomp (Plaintext): Plaintext décomposé suivant une base beta
-        q (int): Modulo de l'espace des chiffrés
-        degree (int): Degré des polynômes de glev
+        glev (Ciphertext): Ciphertext in GLEV
+        decomp (Plaintext): Plaintext decomposed following a base beta
+        q (int): Modulus of the ciphertext space
+        degree (int): Degree of the glev polynomials
 
     Returns:
-        Ciphertext: Résultat du produit (proche d'un produit scalaire)
+        Ciphertext: Result of the product (close to a scalar product)
     """
     product = jax.vmap(multiply_plaintext_ciphertext,in_axes=(0,0,None,None,None))(decomp, glev, degree, True, glev_fft)
     product = jnp.stack(product)
@@ -200,17 +200,17 @@ def gadget_product(glev:Ciphertext, decomp:Plaintext,  degree:int, glev_fft:bool
 
 @partial(jax.jit, static_argnames=['beta','l','q'])
 def get_GLEV_ciphertext(c:Ciphertext,beta:int,l:int, q:int)->Ciphertext:
-    """Cette fonction prend un chiffré et renvoie son GLEV associé.
+    """This function takes a ciphertext and returns its associated GLEV.
 
     Args:
-        c (Ciphertext): Chiffré, par défaut en RLWE
-        beta (int): Base de décomposition
-        l (int): Puissance maximale de décomposition
-        q (int):Modulo du chiffré
-        degree (int): Degré du chiffré
+        c (Ciphertext): Ciphertext, by default in RLWE
+        beta (int): Decomposition base
+        l (int): Maximum decomposition power
+        q (int): Modulus of the ciphertext
+        degree (int): Degree of the ciphertext
 
     Returns:
-        Ciphertext: GLEV associé au chiffré c
+        Ciphertext: GLEV associated with the ciphertext c
     """
     public_key = c[0]
     b = c[1]
@@ -220,15 +220,15 @@ def get_GLEV_ciphertext(c:Ciphertext,beta:int,l:int, q:int)->Ciphertext:
 
 @partial(jax.jit, static_argnames=['current_modulus','new_modulus'])
 def modulus_switch(c:Ciphertext,current_modulus:int,new_modulus:int):
-    """Cette fonction permet de passer d'un modulo à un autre.
+    """This function switches from one modulus to another.
 
     Args:
-        ciphertext (Ciphertext): Chiffré sur lequel nous souhaitons appliquer le changement de modulo
-        current_modulus (int): Le modulo du chiffré en entré
-        new_modulus (int): Le modulo que l'on souhaite avoir pour le chiffré de sortie
+        ciphertext (Ciphertext): Ciphertext on which we want to apply the modulus change
+        current_modulus (int): The modulus of the input ciphertext
+        new_modulus (int): The modulus we want for the output ciphertext
 
     Returns:
-        Ciphertext: Chiffré avec le nouveau modulo
+        Ciphertext: Ciphertext with the new modulus
     """
     pk, b = c
     new_pk = jnp.round(pk*new_modulus/current_modulus)
@@ -239,14 +239,14 @@ def modulus_switch(c:Ciphertext,current_modulus:int,new_modulus:int):
 
 jax.jit
 def sample_extract(ciphertext:Ciphertext,alpha):
-    """Cette fonction permet d'extraire un coefficient d'un RLWE et renvoie le LWE associé
+    """This function extracts a coefficient from an RLWE and returns the associated LWE
 
     Args:
-        ciphertext (Ciphertext): Polynôme P chiffré en RLWE
-        alpha (int): Index du coefficient que l'on souhaite extraire du polynôme
+        ciphertext (Ciphertext): Polynomial P encrypted in RLWE
+        alpha (int): Index of the coefficient we want to extract from the polynomial
 
     Returns:
-        Ciphertext: LWE correspondant au chiffré de P[index]
+        Ciphertext: LWE corresponding to the ciphertext of P[index]
     """
     public_key,b = ciphertext[0],ciphertext[1]
     degree = public_key.shape[-1]
@@ -260,25 +260,25 @@ def sample_extract(ciphertext:Ciphertext,alpha):
 @partial(jax.jit,static_argnames=['q','beta','l','degree'])
 def packing(ciphertexts:Ciphertext,KSP:Ciphertext,
             q:int, beta:int, l:int, degree:int):
-    """Cette fonction permet de packer un ensemble de LWE dans un RLWE
+    """This function packs a set of LWE into an RLWE
 
     Args:
-        ciphertexts (Ciphertext): L'ensemble des ciphertextes
-        KSP (Ciphertext): Clé de key_switch  pour le packing 
-        q (int): modulus de l'espace des chiffrés
-        beta (int): base de décomposition de entiers
-        l (int): exposant maximal pour notre décomposition
-        degree (int): Degré du polynôme souhaité à l'issue du packing
+        ciphertexts (Ciphertext): The set of ciphertexts
+        KSP (Ciphertext): key_switch key for the packing
+        q (int): modulus of the ciphertext space
+        beta (int): integer decomposition base
+        l (int): maximum exponent for our decomposition
+        degree (int): Degree of the polynomial desired at the end of the packing
 
     Returns:
-        Ciphertext: Ciphertext en RLWE. Ses coefficients sont de gauche à droite ceux de la liste des LWE
+        Ciphertext: Ciphertext in RLWE. Its coefficients are, from left to right, those of the list of LWE
     """
     public_keys,bs = ciphertexts[0],ciphertexts[1]
     n_lwes = bs.shape[0]
     packed_b = jnp.zeros((degree,))
     packed_b = packed_b.at[:n_lwes].set(jnp.squeeze(bs,axis=-1))
     public_key_polynomial = jnp.transpose(public_keys)
-    if n_lwes < degree:##Si le nombre de LWE n'est pas égal au degré du polynôme, on complète par des zeros pour avoir des polynômes de la bonne taille
+    if n_lwes < degree:##If the number of LWE is not equal to the degree of the polynomial, we pad with zeros to get polynomials of the right size
         completion_polynomial = jnp.zeros((degree,degree-n_lwes))
         public_key_polynomial = jnp.concat([public_key_polynomial,completion_polynomial], axis=-1)
     public_key_polynomial_decomp = vmap(decomposition,in_axes=(0,None,None,None))(public_key_polynomial, beta, l,q)
@@ -291,44 +291,44 @@ def packing(ciphertexts:Ciphertext,KSP:Ciphertext,
 def packing_optimized(ciphertexts: tuple, KSP: jnp.ndarray, 
                       q: int, beta: int, l: int, degree: int):
     """
-    Version optimisée en mémoire du packing LWE -> RLWE.
+    Memory-optimized version of LWE -> RLWE packing.
     """
     public_keys, bs = ciphertexts[0], ciphertexts[1]
     n_lwes = bs.shape[0]
     n_lwe_dim = public_keys.shape[1]
 
-    # 1. Utilisation de jnp.pad au lieu de .at[].set() ou jnp.zeros()
+    # 1. Using jnp.pad instead of .at[].set() or jnp.zeros()
     bs_squeezed = jnp.squeeze(bs, axis=-1)
     packed_b = jnp.pad(bs_squeezed, (0, degree - n_lwes))
 
-    # 2. Transposition et padding idiomatique
+    # 2. Transposition and idiomatic padding
     public_key_polynomial = jnp.transpose(public_keys)
     if n_lwes < degree:
-        # Pad uniquement la dimension 'degree' (axe 1)
+        # Pad only the 'degree' dimension (axis 1)
         public_key_polynomial = jnp.pad(public_key_polynomial, ((0, 0), (0, degree - n_lwes)))
 
-    # 3. Remplacement de vmap par jax.lax.scan pour accumuler à la volée
-    # Cela évite de matérialiser le tenseur (n_lwe_dim, degree, l) en mémoire
+    # 3. Replacing vmap with jax.lax.scan to accumulate on the fly
+    # This avoids materializing the (n_lwe_dim, degree, l) tensor in memory
     def scan_body(carry, elements):
         acc_a, acc_b = carry
         ksp_i, pk_i = elements
-        
-        # Décomposition à la volée pour un seul LWE (taille: degree)
+
+        # On-the-fly decomposition for a single LWE (size: degree)
         pk_i_decomp = decomposition(pk_i, beta, l, q)
-        
-        # Produit de gadget pour ce composant
+
+        # Gadget product for this component
         res_a, res_b = gadget_product(ksp_i, pk_i_decomp, degree)
-        
+
         # Accumulation
         return (acc_a + res_a, acc_b + res_b), None
 
-    # Initialisation des accumulateurs (polynômes RLWE de taille 'degree')
+    # Initialization of the accumulators (RLWE polynomials of size 'degree')
     init_carry = (
         jnp.zeros(degree, dtype=public_keys.dtype),
         jnp.zeros(degree, dtype=public_keys.dtype)
     )
 
-    # Exécution du scan le long de la dimension LWE
+    # Execution of the scan along the LWE dimension
     final_carry, _ = jax.lax.scan(scan_body, init_carry, (KSP, public_key_polynomial))
 
     # 4. Finalisation
@@ -368,16 +368,16 @@ def lwe_to_RLWE(lwe:Ciphertext,KSP:Ciphertext,
 @partial(jax.jit, static_argnames=['degree'])
 def trivial_embedding(lwe:Ciphertext, degree: int) -> Ciphertext:
     """
-    Étape 1 : Mapping gratuit du LWE vers le RLWE.
-    Exploite l'arithmétique modulo (X^N + 1).
+    Step 1: Free mapping from LWE to RLWE.
+    Exploits modular arithmetic (X^N + 1).
     """
     a,b = lwe
-    # B(X) = b sur le coefficient 0
+    # B(X) = b on coefficient 0
     B = jnp.zeros(degree)
     B = B.at[0].set(b.squeeze())
-    
+
     # A(X) = a_0 - \sum_{i=1}^{N-1} a_{N-i} X^i
-    # Utilisation de jnp.flip pour optimiser le reverseing des indices en XLA
+    # Using jnp.flip to optimize index reversal in XLA
     A = jnp.zeros(degree, dtype=a.dtype)
     A = A.at[0].set(a[0])
     A = A.at[1:].set(-jnp.flip(a[1:]))
@@ -388,24 +388,24 @@ def trivial_embedding(lwe:Ciphertext, degree: int) -> Ciphertext:
 def apply_automorphism_and_keyswitch(rlwe:Ciphertext, KSK: jax.Array, k: int,
                                     beta:int, l:int, q:int, degree:int ) -> Ciphertext:
     """
-    Applique l'automorphisme X -> X^k et effectue le Key Switch.
-    Dans une implémentation complète, ceci se ferait idéalement dans le domaine NTT.
+    Applies the automorphism X -> X^k and performs the Key Switch.
+    In a complete implementation, this would ideally be done in the NTT domain.
     """
     rlwe = jnp.stack(rlwe)
     #A,B = rlwe
 
-    
-    # Note : Il faut gérer les changements de signes liés au X^N = -1
-    # Pour simplifier le squelette, on illustre la permutation pure.
+
+    # Note: We need to handle the sign changes related to X^N = -1
+    # To simplify the skeleton, we illustrate the pure permutation.
     rlwe_auto = vmap(apply_automorphism,(0,None))(rlwe,k)
-    
+
     A_perm, B_perm = rlwe_auto[0], rlwe_auto[1]
-    
-    # --- Décomposition en base (Gadget Decomposition) ---
-    # C'est ici que le 'Hoisting' entre en jeu : on décompose A_perm une seule fois.
-    A_dec = decomposition(A_perm,beta,l,q) 
-    
-    # --- Produit tensoriel avec la clé d'évaluation (GEMM optimisé CUDA/TPU) ---
+
+    # --- Base decomposition (Gadget Decomposition) ---
+    # This is where 'Hoisting' comes into play: we decompose A_perm only once.
+    A_dec = decomposition(A_perm,beta,l,q)
+
+    # --- Tensor product with the evaluation key (CUDA/TPU-optimized GEMM) ---
     A_ks, B_ks = gadget_product(KSK, A_dec, degree)
     
     return sum_ciphertext_ciphertext([jnp.zeros_like(B_perm),B_perm],[A_ks,B_ks],q)
@@ -414,20 +414,20 @@ def apply_automorphism_and_keyswitch(rlwe:Ciphertext, KSK: jax.Array, k: int,
 def pack_lwe_to_rlwe(lwe:Ciphertext, galois_keys: list[Ciphertext],
                     beta:int, l:int, q:int, degree:int) -> Ciphertext:
     """
-    Étape 2 : L'arbre de Trace en O(log N).
+    Step 2: The Trace tree in O(log N).
     """
-    # 1. Embedding initial
+    # 1. Initial embedding
     lwe = modulus_switch(lwe,q,q/degree)
     rlwe = trivial_embedding(lwe, degree)
-    
-    # 2. Arbre d'automorphismes
-    # XLA va dérouler cette boucle car N est statique, générant un graphe CUDA linéaire et très rapide.
+
+    # 2. Tree of automorphisms
+    # XLA will unroll this loop since N is static, generating a linear and very fast CUDA graph.
     num_steps = int(math.log2(degree))
 
     for i in range(num_steps):
-        # L'exposant de l'automorphisme pour la trace à l'étape i
+        # The automorphism exponent for the trace at step i
         k = 2**(num_steps - i) + 1
-        # Application de l'automorphisme sur le chiffré courant
+        # Applying the automorphism on the current ciphertext
         #rlwe = modulus_switch(rlwe, q, q/2)
         rlwe_auto = apply_automorphism_and_keyswitch(rlwe, galois_keys[i], k, beta, l, q, degree)
         
@@ -446,42 +446,42 @@ def pack_lwe_to_rlwe(lwe:Ciphertext, galois_keys: list[Ciphertext],
 
 @jax.jit
 def rotate_ciphertext(ciphertext:Ciphertext,exponent:jnp.ndarray):
-    """Cette fonction applique une rotation au chiffré.
+    """This function applies a rotation to the ciphertext.
 
     Args:
-        ciphertext (Ciphertext): Chiffré en RLWE auquel on applique un déphasage
-        exponent (jnp.ndarray): Phase à appliquer au chiffré
+        ciphertext (Ciphertext): Ciphertext in RLWE to which we apply a phase shift
+        exponent (jnp.ndarray): Phase to apply to the ciphertext
 
     Returns:
-        Ciphertext: Chiffré en RLWE déphasé de exponent
+        Ciphertext: Ciphertext in RLWE shifted by exponent
     """
     public_key, b = ciphertext[0],ciphertext[1]
-    rotated_public_key = coef_rotation(public_key, exponent) ##On déphase la clé publique
-    rotated_b = coef_rotation(b,exponent) ##On déphase le polynôme B
+    rotated_public_key = coef_rotation(public_key, exponent) ##We shift the public key
+    rotated_b = coef_rotation(b,exponent) ##We shift the polynomial B
     return rotated_public_key, rotated_b
 
 
 @partial(jax.jit,static_argnames=['q','beta','l','degree','collapse','n_lut'])
 def blind_rotate(ciphertext_lwe:Ciphertext, LUT:Ciphertext, BSK:Tuple[RGSW],
                  q:int,beta:int,l:int,degree:int,collapse:int, all_rot_fft:jnp.array, n_lut:int):
-    """Cette fonction permet de réaliser une rotation à l'aveugle, c'est à dire de changer la phase du polynôme sans connaître le dephasage que l'on souhaite appliqué.
+    """This function performs a blind rotation, i.e. changing the phase of the polynomial without knowing the phase shift we wish to apply.
 
     Args:
-        ciphertext_lwe (Ciphertext): Message chiffré, correspondant à la phase chiffré en LWE
-        LUT (Ciphertext): Look-Up Table chiffrée en RLWE
-        BSK (RGSW): Clé de bootstrapping
-        q (int): Modulo dans l'espace des chiffré
-        beta (int): Base de décomposition
-        l (int): Puissance maximale pour la décompositon
-        degree (int): Degré de la Look-Up Table
+        ciphertext_lwe (Ciphertext): Encrypted message, corresponding to the phase encrypted in LWE
+        LUT (Ciphertext): Look-Up Table encrypted in RLWE
+        BSK (RGSW): Bootstrapping key
+        q (int): Modulus in the ciphertext space
+        beta (int): Decomposition base
+        l (int): Maximum power for the decomposition
+        degree (int): Degree of the Look-Up Table
 
     Returns:
-        RLWE: Polynôme dephasé par me chiffré LWE 
+        RLWE: Polynomial shifted by the LWE ciphertext
     """
     public_key_lwe, b_lwe = ciphertext_lwe[0],ciphertext_lwe[1]
     b_lwe = jnp.round(2*degree*b_lwe/(q*n_lut))*n_lut
     ct_out = rotate_ciphertext(LUT,-b_lwe)
-    ct_out = multiply_seq_monomial(ct_out,public_key_lwe,BSK,q,beta,l,degree,collapse, all_rot_fft,n_lut) ## On dephase de sum(a_i*s_i) sans connaître les s_i
+    ct_out = multiply_seq_monomial(ct_out,public_key_lwe,BSK,q,beta,l,degree,collapse, all_rot_fft,n_lut) ## We shift by sum(a_i*s_i) without knowing the s_i
 
     return ct_out
     
@@ -489,19 +489,19 @@ def blind_rotate(ciphertext_lwe:Ciphertext, LUT:Ciphertext, BSK:Tuple[RGSW],
 @partial(jax.jit,static_argnames=['q','beta','l','degree','collapse','n_lut'])
 def multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[RGSW],
                           q:int,beta:int,l:int,degree:int,collapse:int, all_rot_fft:jnp.array,n_lut)->Ciphertext:
-    """Cette fonction permet de réaliser la multiplication séquentielle dans l'espace chiffré de M par X^{sum(a_i*s_i)}.
+    """This function performs the sequential multiplication in the encrypted space of M by X^{sum(a_i*s_i)}.
 
     Args:
-        ciphertext (Ciphertext): Ciphertext en RLWE
-        public_key (jnp.array): Clé publique correspondant aux a_i
-        BSK (Tuple[RGSW]): Clé de boostrapping correspondant aux messages chiffrés RGSW(s_i)
-        q (int): Modulo de l'espace des chiffrés
-        beta (int): Base de décomposition
-        l (int): PUissance maximale de décomposition
-        degree (int): Degré des polyômes des chiffrés
+        ciphertext (Ciphertext): Ciphertext in RLWE
+        public_key (jnp.array): Public key corresponding to the a_i
+        BSK (Tuple[RGSW]): Bootstrapping key corresponding to the messages encrypted as RGSW(s_i)
+        q (int): Modulus of the ciphertext space
+        beta (int): Decomposition base
+        l (int): Maximum decomposition power
+        degree (int): Degree of the ciphertext polynomials
 
     Returns:
-        Ciphertext: Message chiffré déphasé de sum(a_i*s_i)
+        Ciphertext: Encrypted message shifted by sum(a_i*s_i)
     """
     n = public_key.shape[-1]
 
@@ -514,7 +514,7 @@ def multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[R
     bsk_array = BSK
     shape = list(bsk_array.shape)
     shape[3] = n_iter
-    shape.insert(4, 2**collapse) # On split l'axe 3 en (n_iter, chunk_size)
+    shape.insert(4, 2**collapse) # We split axis 3 into (n_iter, chunk_size)
     bsk_reshaped = bsk_array.reshape(shape)
     bsk_reshaped = jnp.permute_dims(bsk_reshaped,(3,0,2,1,4,5))
 
@@ -525,7 +525,7 @@ def multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[R
         dec_fft = jax_fourier(dec)
         sum_rgsw = jnp.einsum('abcmd, md -> abcd', bsk_chunk, all_rot_fft[rot_indices])
 
-        # # On applique le BSK
+        # # We apply the BSK
         prod = jnp.einsum('abcd, bcd -> ad', sum_rgsw, dec_fft)
         ct_next = centered_mod(jax_inversefourier(prod),q)
         return ct_next, None
@@ -539,19 +539,19 @@ def multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[R
 @partial(jax.jit,static_argnames=['q','beta','l','degree','collapse','n_lut'])
 def many_LUT_multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[RGSW],
                           q:int,beta:int,l:int,degree:int,collapse:int, all_rot_fft:jnp.array, n_lut:int)->Ciphertext:
-    """Cette fonction permet de réaliser la multiplication séquentielle dans l'espace chiffré de M par X^{sum(a_i*s_i)}.
+    """This function performs the sequential multiplication in the encrypted space of M by X^{sum(a_i*s_i)}.
 
     Args:
-        ciphertext (Ciphertext): Ciphertext en RLWE
-        public_key (jnp.array): Clé publique correspondant aux a_i
-        BSK (Tuple[RGSW]): Clé de boostrapping correspondant aux messages chiffrés RGSW(s_i)
-        q (int): Modulo de l'espace des chiffrés
-        beta (int): Base de décomposition
-        l (int): PUissance maximale de décomposition
-        degree (int): Degré des polyômes des chiffrés
+        ciphertext (Ciphertext): Ciphertext in RLWE
+        public_key (jnp.array): Public key corresponding to the a_i
+        BSK (Tuple[RGSW]): Bootstrapping key corresponding to the messages encrypted as RGSW(s_i)
+        q (int): Modulus of the ciphertext space
+        beta (int): Decomposition base
+        l (int): Maximum decomposition power
+        degree (int): Degree of the ciphertext polynomials
 
     Returns:
-        Ciphertext: Message chiffré déphasé de sum(a_i*s_i)
+        Ciphertext: Encrypted message shifted by sum(a_i*s_i)
     """
     n = public_key.shape[-1]
 
@@ -564,7 +564,7 @@ def many_LUT_multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BS
     bsk_array = BSK
     shape = list(bsk_array.shape)
     shape[3] = n_iter
-    shape.insert(4, 2**collapse) # On split l'axe 3 en (n_iter, chunk_size)
+    shape.insert(4, 2**collapse) # We split axis 3 into (n_iter, chunk_size)
     bsk_reshaped = bsk_array.reshape(shape)
     bsk_reshaped = jnp.permute_dims(bsk_reshaped,(3,0,2,1,4,5))
 
@@ -575,7 +575,7 @@ def many_LUT_multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BS
         dec_fft = jax_fourier(dec)
         sum_rgsw = jnp.einsum('abcmd, md -> abcd', bsk_chunk, all_rot_fft[rot_indices])
 
-        # # On applique le BSK
+        # # We apply the BSK
         prod = jnp.einsum('abcd, bcd -> ad', sum_rgsw, dec_fft)
         ct_next = centered_mod(jax_inversefourier(prod),q)
         return ct_next, None
@@ -586,16 +586,16 @@ def many_LUT_multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BS
 
 def all_binary_vectors(m: int):
     """
-    Génère une matrice (3^m, m) contenant toutes les combinaisons 
-    de  0, 1} pour un vecteur de taille m.
+    Generates a matrix (3^m, m) containing all the combinations
+    of {0, 1} for a vector of size m.
     """
-    # Définition de l'espace de base
+    # Definition of the base space
     values = jnp.array([ 0, 1], dtype=jnp.int32)
-    
-    # Création des grilles de coordonnées pour chaque dimension
-    # indexing='ij' assure l'ordre cartésien correct
+
+    # Creation of the coordinate grids for each dimension
+    # indexing='ij' ensures the correct Cartesian order
     grids = jnp.meshgrid(*[values] * m, indexing='ij')
-    
-    # Empilement sur le dernier axe et redimensionnement
-    # On transforme la liste de m grilles (3, 3, ..., 3) en (3^m, m)
+
+    # Stacking on the last axis and reshaping
+    # We transform the list of m grids (3, 3, ..., 3) into (3^m, m)
     return jnp.stack(grids, axis=-1).reshape(-1, m)

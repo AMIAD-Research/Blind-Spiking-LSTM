@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [tool.scikit-build]
-cmake.minimum-version = "3.18"
+cmake.version = ">=3.18"
 cmake.build-type = "Release"
 sdist.include = ["third_party/nvidia-mathdx-25.12.0-cuda12/**",
         "third_party/xla/**",]

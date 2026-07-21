@@ -16,18 +16,18 @@ def prepare_bootstrapping(key,
                           sk:jax.Array, sk_lut:jax.Array, sk_bsk:jax.Array,
                           dict_params:dict, dict_params_lut:dict, dict_params_ks_LWE:dict, 
                           function_lut:Callable, factor:int, collapse:int=None):
-    """Cette fonction calcule les différents clés nécessaires au bootstrapping
+    """This function computes the various keys needed for bootstrapping
 
     Args:
-        key (jax.random): Rngs de jax afin de faire des tirage aléatoire pour l'encryption
-        sk (jax.Array): Clé privée du message m
-        sk_lut (jax.Array): Clé privée de la LUT
-        sk_bsk (jax.Array): Clé privée pour le bootstrapping, plus petite que sk afin d'accélérer le bootstrapping
-        dict_params (dict): Paramètres de chiffrement avec sk
-        dict_params_lut (dict): Paramètres de chiffrement de la LUT
-        dict_params_ks_LWE (dict): Paramètres de chiffement des LWE
-        function_lut (Callable): Fonction renvoie le polynôme de la LUT
-        factor (int): Factor par lequel on multiplie la LUT
+        key (jax.random): Jax rng used to draw random samples for the encryption
+        sk (jax.Array): Private key of the message m
+        sk_lut (jax.Array): Private key of the LUT
+        sk_bsk (jax.Array): Private key for the bootstrapping, smaller than sk to speed up the bootstrapping
+        dict_params (dict): Encryption parameters with sk
+        dict_params_lut (dict): Encryption parameters of the LUT
+        dict_params_ks_LWE (dict): Encryption parameters of the LWE
+        function_lut (Callable): Function returning the LUT's polynomial
+        factor (int): Factor by which the LUT is multiplied
 
     """
     
@@ -52,7 +52,7 @@ def prepare_bootstrapping(key,
     bsk_array_fourier = jax_fourier(bsk_array)
     bsk_ordered = jnp.permute_dims(bsk_array_fourier,[1,0,3,2,4])
 
-    ###Les paramètres de key switching sont définis par le dictionnaire de la lut
+    ###The key switching parameters are defined by the lut's dictionary
     dict_params_copy = copy.deepcopy(dict_params)
     dict_params_copy["beta_ks"] = dict_params_lut["beta_ks"]
     dict_params_copy["l_ks"] = dict_params_lut["l_ks"]
@@ -68,7 +68,7 @@ def prepare_bootstrapping(key,
 
 
 class HeavysideBoostrapper:
-    """Cette classe permet de réaliser un bootstrapping, càd une fonction d'activation
+    """This class performs a bootstrapping, i.e. an activation function
     """
     def __init__(self,
                 bootstrapping_key:RGSW,
@@ -117,20 +117,20 @@ class HeavysideBoostrapper:
 
 
     def __call__(self, h:Ciphertext, encrypted_LUT:Ciphertext):
-        """Cette fonction permet d'appliquer la fonction du boostrapping. En règle générale, c'est une fonction Relu, mais peut aussi-être une sigmoid ou autre.
+        """This function applies the bootstrapping function. Generally this is a Relu function, but it could also be a sigmoid or other.
 
         Args:
-            h (Ciphertext): Hidden state, correspondant à une shape [( hidden_dim,degree), (hidden_dim,1)]
+            h (Ciphertext): Hidden state, corresponding to a shape [( hidden_dim,degree), (hidden_dim,1)]
         """
 
 
-  
-        ###On change la taille de la clé secrète du chiffré pour diminuer le nombre d'itération dans la for loop du bootstrapping
+
+        ###We change the size of the ciphertext's secret key to reduce the number of iterations in the bootstrapping's for loop
         c_lwe_ks = key_switch_LWE(self.key_switching_key_bs, h, self.dict_params_ks_LWE)
 
 
 
-        ###On réalise le bootstapping fonctionnel
+        ###We perform the functional bootstrapping
         y1_boot = bootstrapping(c_lwe_ks,
                                                                                     encrypted_LUT,
                                                                                     self.bootstrapping_key,
@@ -159,7 +159,7 @@ class HeavysideBoostrapper:
 
 
 class ReluBoostrapper:
-    """Cette classe permet de réaliser un bootstrapping, càd une fonction d'activation
+    """This class performs a bootstrapping, i.e. an activation function
     """
     def __init__(self,
                 bootstrapping_key:RGSW,
@@ -205,20 +205,20 @@ class ReluBoostrapper:
 
 
     def __call__(self, h:Ciphertext):
-        """Cette fonction permet d'appliquer la fonction du boostrapping. En règle générale, c'est une fonction Relu, mais peut aussi-être une sigmoid ou autre.
+        """This function applies the bootstrapping function. Generally this is a Relu function, but it could also be a sigmoid or other.
 
         Args:
-            h (Ciphertext): Hidden state, correspondant à une shape [( hidden_dim,degree), (hidden_dim,1)]
+            h (Ciphertext): Hidden state, corresponding to a shape [( hidden_dim,degree), (hidden_dim,1)]
         """
 
 
-  
-        ###On change la taille de la clé secrète du chiffré pour diminuer le nombre d'itération dans la for loop du bootstrapping
+
+        ###We change the size of the ciphertext's secret key to reduce the number of iterations in the bootstrapping's for loop
         c_lwe_ks = vmap(key_switch_LWE,(None,0,None))(self.key_switching_key_bs, h, self.dict_params_ks_LWE)
 
 
 
-        ###On réalise le bootstapping fonctionnel
+        ###We perform the functional bootstrapping
         y1_boot = vmap(bootstrapping,(0,0, None,None,None,None,None,None,None))(c_lwe_ks,
                                                                                 self.LUT,
                                                                                 self.bootstrapping_key,

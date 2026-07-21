@@ -16,6 +16,7 @@ wget -q https://github.com/openxla/xla/archive/22b016fefb.tar.gz -O - | tar -xz 
 
 
 Venv + compilation
+Please create a spack env "cutfhe-env" and install cuda with it.
 ```bash
 uv sync --frozen
 source .venv/bin/activate

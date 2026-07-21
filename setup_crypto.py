@@ -21,7 +21,7 @@ def sample_crypto_keys(seed):
         sk_lut = sk
 
         
-        # ###Génération des clés de packing
+        # ###Generation of the packing keys
         ksk_packing= get_packing_KSK(sk_lut, sk_lut, dict_params,
                                         q, dict_params["beta_ks"],dict_params["l_ks"], key )
 
