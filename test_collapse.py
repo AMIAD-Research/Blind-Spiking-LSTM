@@ -207,21 +207,28 @@ print()
 
 
 print("Cuda")
-start = time.time()
 boot = cuboot_merge(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"]
-         ,dict_params_lut["degree"],collapse, all_rot_possible_fourier,1)
+            ,dict_params_lut["degree"],collapse, all_rot_possible_fourier,1)
 boot[1].block_until_ready()
 boot[0].block_until_ready()
-#jax.profiler.stop_trace()
-boostrapping_time = time.time() - start
+boostrapping_time = 0
+
+for _ in range(100):
+    start = time.time()
+    boot = cuboot_merge(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"]
+            ,dict_params_lut["degree"],collapse, all_rot_possible_fourier,1)
+    boot[1].block_until_ready()
+    boot[0].block_until_ready()
+
+    boostrapping_time += time.time() - start
 
 f_m1 = (vmap(decrypt_LWE_quantization,(0,None,None,None))(boot,sk_lut,dict_params_lut, beta_x)).flatten()
 
 
 
-#a = lut_fn(m_1[:,0].flatten())
+
 a = jnp.where(m1[:,0]>=0 , 1, 0)
-b = f_m1.flatten()
+b = jnp.round(f_m1.flatten())
 if jnp.abs(a - b.flatten()).mean() <=0.5:
     print(Fore.GREEN + "Boostratpping with collapse OK")
     print(jnp.abs(a - b.flatten()).mean())
@@ -229,17 +236,10 @@ else:
     print(Fore.RED + "Boostratpping with collapse Not OK")
     print(Fore.RED + f"Error {jnp.abs(a - b.flatten()).mean()}")
 
-print(Fore.YELLOW + f"Bootstrapping with collapse compute time : {boostrapping_time}")
-print(Fore.YELLOW + f"Bootstrapping with collapse compute time amortized: {boostrapping_time/B}")
+print(Fore.YELLOW + f"Bootstrapping with collapse compute time : {boostrapping_time/100}")
+print(Fore.YELLOW + f"Bootstrapping with collapse compute time amortized: {boostrapping_time/(B*100)}")
 print()
 
-
-
-test = BR(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"],dict_params_lut["degree"],collapse, all_rot_possible_fourier,1)
-
-test_rotated = vmap(rotate_ciphertext,(0,None))(test,-degree_lut//6)
-test_extracted = vmap(sample_extract,(0,None))(test_rotated,0)
-test_dec = (vmap(decrypt_LWE_quantization,(0,None,None,None))(test_extracted, sk_lut, dict_params_lut, beta_x)).flatten()
-true_values = jnp.where(m1[:,0]>=t//12 , 1, 0)
-print(f"Error BR : {jnp.abs(true_values - test_dec.flatten()).mean()}")
 breakpoint()
+
+
