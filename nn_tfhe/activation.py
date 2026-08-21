@@ -101,7 +101,6 @@ class HeavysideBoostrapper:
     
     
     def prepare_LUT(self, c_lwe, input_lut):
-
         c_rlwe = pack_lwe_to_rlwe(c_lwe, self.galois_key, self.dict_params_packing["beta_ks"],  self.dict_params_packing["l_ks"], self.dict_params_packing["q"],self.dict_params_packing["degree"])
         prod = multiply_plaintext_ciphertext(input_lut, c_rlwe, self.dict_params_packing["degree"])
         return prod

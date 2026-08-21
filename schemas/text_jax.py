@@ -406,7 +406,8 @@ def apply_automorphism_and_keyswitch(rlwe:Ciphertext, KSK: jax.Array, k: int,
     A_dec = decomposition(A_perm,beta,l,q)
 
     # --- Tensor product with the evaluation key (CUDA/TPU-optimized GEMM) ---
-    A_ks, B_ks = gadget_product(KSK, A_dec, degree)
+    #breakpoint()
+    A_ks, B_ks = gadget_product(KSK, A_dec, degree,glev_fft=True)
     
     return sum_ciphertext_ciphertext([jnp.zeros_like(B_perm),B_perm],[A_ks,B_ks],q)
 

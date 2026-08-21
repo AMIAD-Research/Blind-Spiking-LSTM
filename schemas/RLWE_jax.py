@@ -1,4 +1,4 @@
-from schemas.polynomial_jax import centered_mod, exact_polynomial_multiply, fft_polynomial_multiply, GLEV_polynomial, decomposition, apply_automorphism
+from schemas.polynomial_jax import centered_mod, exact_polynomial_multiply, fft_polynomial_multiply, GLEV_polynomial, decomposition, apply_automorphism, jax_fourier
 from schemas.text_jax import gadget_product,sum_ciphertext_ciphertext, modulus_switch,blind_rotate, sample_extract, all_binary_vectors, rotate_ciphertext
 from schemas.format import Ciphertext,Plaintext,RGSW
 import jax.numpy as jnp
@@ -250,6 +250,7 @@ def get_galois_key(sk,dict_params,key):
     sk_auto = vmap(apply_automorphism,(None,0))(sk,k)
     galois_key = vmap(get_keyswitch_sk,(None,0,None,0))(sk,sk_auto,dict_params,key)
     galois_key = jnp.stack(galois_key,axis=2)
+    galois_key = jax_fourier(galois_key)
     return galois_key
 
 

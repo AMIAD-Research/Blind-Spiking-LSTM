@@ -178,8 +178,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--conf", default="conf_sst2.json")
 
-    ap.add_argument("--reps", type=int, default=10)
-    ap.add_argument("--warmup", type=int, default=5)
+    ap.add_argument("--reps", type=int, default=5)
+    ap.add_argument("--warmup", type=int, default=2)
     ap.add_argument("--warm-step", type=int, default=0,
                     help="indice du pas dont on reprend l'etat (bruit realiste)")
     ap.add_argument("--seed", type=int, default=0)
