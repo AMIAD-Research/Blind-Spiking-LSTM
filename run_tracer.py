@@ -4,7 +4,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 os.environ['XLA_FLAGS'] = (
     '--xla_gpu_triton_gemm_any=True '
-    '--xla_gpu_enable_latency_hiding_scheduler=true '
+    #'--xla_gpu_enable_latency_hiding_scheduler=true '
 )
 
 
@@ -61,6 +61,7 @@ with open("conf_sst2.json") as f:
 
 embeddings_model = get_embedding_model(config)
 hidden_dim = config["hidden_dim"]
+config["max_length"] = 128
 task = config["task"]
 input_dim = config["input_dim"]
 n_lut = config["n_lut"]
@@ -106,15 +107,18 @@ cipher_lstm = CipherSpikeLSTM(
                                 beta_x = beta_x
 )
 max_len = config["max_length"]
-batch_size = 16
+batch_size = 1
 n_test = 5
 runtime_tot = 0
 from jax.profiler import ProfileOptions
+opts = jax.profiler.ProfileOptions()
 
-opts = ProfileOptions()
-opts.host_tracer_level = 1      # 0 = rien, 2 = défaut, 3 = verbeux
-opts.python_tracer_level = 0 
-for i in tqdm(range(n_test)):
+opts.host_tracer_level = 2
+opts.device_tracer_level = 1
+opts.python_tracer_level = 0
+
+
+for i in tqdm(range(2)):
         
     seq_len = np.ones(batch_size).astype(int)*max_len
     x = jnp.array(np.random.uniform(-1,1,(batch_size,max_len,input_dim))*1.)
@@ -136,28 +140,18 @@ for i in tqdm(range(n_test)):
     out = vmap(cipher_head,0)(H_t) 
     y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
     y_c.block_until_ready()
-    if i != 0:
-        runtime_tot += time.time() - start
 
-    if i==n_test-1:
-        with jax.profiler.trace("jax_trace", profiler_options=opts):
-            ((H_t, C_t), (out_H_new, out_C_new)) = vmap(cipher_lstm,(0,0))(X_cipher, seq_len)
-            H_t = vmap(vmap(rotate_ciphertext,(0,None)),(0,None))(out_H_new,-input_dim)
-            H_t = H_t[0][jnp.arange(x.shape[0]), seq_len-1], H_t[1][jnp.arange(x.shape[0]), seq_len-1]
-        
-            out = vmap(cipher_head,0)(H_t) 
-            y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
-            y_c.block_until_ready()
 
-print(f"log Beta_bs : {jnp.log2(beta_bs)}")
-print(f"l_bs : {l_bs}")
-print(f"Max length : {config["max_length"]}")
-print(f"Hidden dim : {config["hidden_dim"]}")
-print(f"LUT count: {config["n_lut"]}")
-print(f"Collapse : {collapse}")
-print(f"Batch size : {batch_size}")
-print(f"Complete runtime : {runtime_tot}")
-print(f"Batch runtime : {runtime_tot/(n_test-1)}")
-print(f"Amortized runtime : {runtime_tot/((n_test-1)*batch_size)}")
+
+with jax.profiler.trace("jax_trace",profiler_options=opts):
+    for i in tqdm(range(1)):
+        ((H_t, C_t), (out_H_new, out_C_new)) = vmap(cipher_lstm,(0,0))(X_cipher, seq_len)
+        H_t = vmap(vmap(rotate_ciphertext,(0,None)),(0,None))(out_H_new,-input_dim)
+        H_t = H_t[0][jnp.arange(x.shape[0]), seq_len-1], H_t[1][jnp.arange(x.shape[0]), seq_len-1]
+
+        out = vmap(cipher_head,0)(H_t) 
+        y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
+        y_c.block_until_ready()
+
 
 

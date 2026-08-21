@@ -101,18 +101,22 @@ class HeavysideBoostrapper:
     
     
     def prepare_LUT(self, c_lwe, input_lut):
-        c_rlwe = pack_lwe_to_rlwe(c_lwe, self.galois_key, self.dict_params_packing["beta_ks"],  self.dict_params_packing["l_ks"], self.dict_params_packing["q"],self.dict_params_packing["degree"])
-        prod = multiply_plaintext_ciphertext(input_lut, c_rlwe, self.dict_params_packing["degree"])
-        return prod
+        with jax.profiler.TraceAnnotation("LUT"):
+            with jax.named_scope("LUT"):
+                c_rlwe = pack_lwe_to_rlwe(c_lwe, self.galois_key, self.dict_params_packing["beta_ks"],  self.dict_params_packing["l_ks"], self.dict_params_packing["q"],self.dict_params_packing["degree"])
+                prod = multiply_plaintext_ciphertext(input_lut, c_rlwe, self.dict_params_packing["degree"])
+                return prod
     
 
     def packing(self,x):
-        return packing(x,
-                    self.ksk_packing,
-                    self.dict_params["q"],
-                    self.dict_params["beta_ks"],
-                    self.dict_params["l_ks"],
-                    self.dict_params["degree"])
+        with jax.profiler.TraceAnnotation("packing"):
+            with jax.named_scope("packing"):
+                return packing(x,
+                            self.ksk_packing,
+                            self.dict_params["q"],
+                            self.dict_params["beta_ks"],
+                            self.dict_params["l_ks"],
+                            self.dict_params["degree"])
 
 
 
@@ -145,15 +149,19 @@ class HeavysideBoostrapper:
         return y1_boot
     
     def cuboot(self,h,encrypted_LUT):
-        c_lwe_ks = vmap(key_switch_LWE,(None,0,None))(self.key_switching_key_bs, h, self.dict_params_ks_LWE)
-        y1_boot = cuboot_merge(c_lwe_ks, encrypted_LUT, self.bootstrapping_key,
-                                                            self.dict_params_lut["q"],
-                                                            self.dict_params_lut["beta_bs"],
-                                                            self.dict_params_lut["l_bs"],
-                                                            self.dict_params_lut["degree"],
-                                                            self.collapse,
-                                                            self.all_rot_possible_fourier,
-                                                            self.n_lut)
+        with jax.profiler.TraceAnnotation("KS"):
+            with jax.named_scope("KS"):
+                c_lwe_ks = vmap(key_switch_LWE,(None,0,None))(self.key_switching_key_bs, h, self.dict_params_ks_LWE)
+        with jax.profiler.TraceAnnotation("PBS"):
+            with jax.named_scope("PBS"):
+                y1_boot = cuboot_merge(c_lwe_ks, encrypted_LUT, self.bootstrapping_key,
+                                                                    self.dict_params_lut["q"],
+                                                                    self.dict_params_lut["beta_bs"],
+                                                                    self.dict_params_lut["l_bs"],
+                                                                    self.dict_params_lut["degree"],
+                                                                    self.collapse,
+                                                                    self.all_rot_possible_fourier,
+                                                                    self.n_lut)
         return y1_boot
 
 

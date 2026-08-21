@@ -134,6 +134,7 @@ class CipherSpikeLSTM:
             input_boot = [jnp.concat([F_t[0], I_t[0]], axis=0), jnp.concat([F_t[1], I_t[1]], axis=0)]
             lut_boot = [jnp.concat([lut_C_t_1[0], self.lut_i[0]], axis=0), jnp.concat([lut_C_t_1[1], self.lut_i[1]], axis=0)]
             #breakpoint()
+
             boot = self.heavyBS.cuboot(input_boot, lut_boot)
             
             # Applying your reshaping
