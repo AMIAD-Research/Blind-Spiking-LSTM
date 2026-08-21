@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 os.environ['XLA_FLAGS'] = (
@@ -73,18 +73,18 @@ n_lut = config["n_lut"]
 sk, ksk_packing, galois_key, bsk, key_switching_key_bs = sample_crypto_keys(seed)
 
 ###Linear instanciation
-zeros_cell = jnp.zeros((768,64))
-zeros_mlp1 = jnp.zeros((256,256))
-zeros_out = jnp.zeros((256,1))
-linear_cell = Linear(hidden_dim, dict_params, jnp.ones(64)*q/(4*beta_x))
-linear_cell.set_weights(zeros_cell, jnp.zeros(64))
+zeros_cell = jnp.zeros((input_dim,hidden_dim))
+zeros_mlp1 = jnp.zeros((hidden_dim,hidden_dim))
+zeros_out = jnp.zeros((hidden_dim,1))
+linear_cell = Linear(hidden_dim, dict_params, jnp.ones(hidden_dim)*q/(4*beta_x))
+linear_cell.set_weights(zeros_cell, jnp.zeros(hidden_dim))
 W_f = linear_cell
 W_i = linear_cell
 W_c = linear_cell
 W_o = linear_cell
 
-W_head1 = Linear(hidden_dim, dict_params, jnp.ones(256)*q/(4*beta_x))
-W_head1.set_weights(zeros_mlp1, jnp.zeros(256))
+W_head1 = Linear(hidden_dim, dict_params, jnp.ones(hidden_dim)*q/(4*beta_x))
+W_head1.set_weights(zeros_mlp1, jnp.zeros(hidden_dim))
 
 
 W_out  = Linear(hidden_dim, dict_params, jnp.ones(1)*q/(4*beta_x))
@@ -104,7 +104,7 @@ reluBS = ReluBoostrapper(
                                         collapse = collapse,
                                         all_rot_possible_fourier = all_rot_possible_fourier,
                                         beta_x = beta_x,
-                                        s_head = jnp.ones(256)*8
+                                        s_head = jnp.ones(hidden_dim)*8
         )
 
 

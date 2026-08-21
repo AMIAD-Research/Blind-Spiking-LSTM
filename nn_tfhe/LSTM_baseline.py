@@ -44,8 +44,8 @@ class CipherLSTM:
         self.n_lut = n_lut
         x = jnp.linspace(-5,5,self.degree_lut)
         x_square = 0.25*x**2
-        self.LUT_sigmoid = [jnp.zeros((self.hidden_dim//self.n_lut, self.degree_lut)), beta_x * jnp.stack([jnp.round(gamma_sigmoid * jax.nn.sigmoid(x)) for _ in range(self.hidden_dim//self.n_lut)])]
-        self.LUT_tanh = [jnp.zeros((self.hidden_dim//self.n_lut, self.degree_lut)), beta_x * jnp.stack([jnp.round(gamma_tanh * jax.nn.tanh(x)) for _ in range(self.hidden_dim//self.n_lut)])]
+        self.LUT_sigmoid = [jnp.zeros((self.hidden_dim, self.degree_lut)), beta_x * jnp.stack([jnp.round(gamma_sigmoid * jax.nn.sigmoid(x)) for _ in range(self.hidden_dim)])]
+        self.LUT_tanh = [jnp.zeros((self.hidden_dim, self.degree_lut)), beta_x * jnp.stack([jnp.round(gamma_tanh * jax.nn.tanh(x)) for _ in range(self.hidden_dim)])]
         self.LUT_square = [jnp.zeros((self.hidden_dim, self.degree_lut)), beta_x * jnp.stack([jnp.round(beta_x * x_square) for _ in range(self.hidden_dim)])]
         self.heavyBS = heavyBS
         self.beta_x = beta_x
@@ -95,8 +95,8 @@ class CipherLSTM:
                                                                     self.all_rot_possible_fourier,
                                                                     1)
         output = [
-                    centered_mod(boot_plus[0][:,0] + boot_minus[0][:,0],self.dict_params["q"]),
-                    centered_mod(boot_plus[1][:,0] + boot_minus[1][:,0],self.dict_params["q"])
+                    centered_mod(boot_plus[0][:,0] - boot_minus[0][:,0],self.dict_params["q"]),
+                    centered_mod(boot_plus[1][:,0] - boot_minus[1][:,0],self.dict_params["q"])
                 ]
 
     
@@ -136,44 +136,30 @@ class CipherLSTM:
             I_t = self.W_i(HX)
             C_t = self.W_c(HX)
             O_t = self.W_o(HX)
-
-            ## Sigmoids + tanh
-            # input_sig = [jnp.concat([F_t[0], I_t[0], C_t[0], O_t[0]], axis=0), jnp.concat([F_t[1], I_t[1], C_t[1], O_t[1]], axis=0)]
-            # lut_sig = [jnp.concat([self.LUT_sigmoid[0],self.LUT_sigmoid[0],self.LUT_tanh[0],self.LUT_sigmoid[0]], axis=0), jnp.concat([self.LUT_sigmoid[1],self.LUT_sigmoid[1],self.LUT_tanh[1],self.LUT_sigmoid[1]], axis=0)]
-            # input_sig_ks = vmap(key_switch_LWE,(None,0,None))(self.key_switching_key_bs, input_sig, self.dict_params_ks_LWE)
-            # #breakpoint()
-            # boot = cuboot_merge(input_sig_ks, lut_sig, self.bootstrapping_key,
-            #                                                 self.dict_params_lut["q"],
-            #                                                 self.dict_params_lut["beta_bs"],
-            #                                                 self.dict_params_lut["l_bs"],
-            #                                                 self.dict_params_lut["degree"],
-            #                                                 self.collapse,
-            #                                                 self.all_rot_possible_fourier,
-            #                                                 1)
             
-            # sig_f = [jnp.concat([boot[0][:self.hidden_dim//self.n_lut,0] for _ in range(self.n_lut)],axis=0), 
-            #         jnp.concat([boot[1][:self.hidden_dim//self.n_lut,0] for _ in range(self.n_lut)],axis=0)]
-            # sig_i = [jnp.concat([boot[0][self.hidden_dim//self.n_lut:2*self.hidden_dim//self.n_lut,0] for _ in range(self.n_lut)],axis=0), 
-            #         jnp.concat([boot[1][self.hidden_dim//self.n_lut:2*self.hidden_dim//self.n_lut,0] for _ in range(self.n_lut)],axis=0)]
-            # tanh_c = [jnp.concat([boot[0][2*self.hidden_dim//self.n_lut:3*self.hidden_dim//self.n_lut,0] for _ in range(self.n_lut)],axis=0), 
-            #         jnp.concat([boot[1][2*self.hidden_dim//self.n_lut:3*self.hidden_dim//self.n_lut,0] for _ in range(self.n_lut)],axis=0)]
-            # sig_o = [jnp.concat([boot[0][3*self.hidden_dim//self.n_lut:,0] for _ in range(self.n_lut)],axis=0),
-            #         jnp.concat([boot[1][3*self.hidden_dim//self.n_lut:,0] for _ in range(self.n_lut)],axis=0)]
-            boot = self.bootstrapping(F_t, self.LUT_sigmoid)
-            sig_f = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
-                    jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            sig_f = self.bootstrapping(F_t, self.LUT_sigmoid)
             
-            boot = self.bootstrapping(I_t, self.LUT_sigmoid)
-            sig_i = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
-                    jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            sig_i = self.bootstrapping(I_t, self.LUT_sigmoid)
             
-            boot = self.bootstrapping(C_t, self.LUT_tanh)
-            tanh_c = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
-                    jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            tanh_c = self.bootstrapping(C_t, self.LUT_tanh)
             
-            boot = self.bootstrapping(O_t, self.LUT_sigmoid)
-            sig_o = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
-                    jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            sig_o = self.bootstrapping(O_t, self.LUT_sigmoid)
+            
+            # boot = self.bootstrapping(F_t, self.LUT_sigmoid)
+            # sig_f = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
+            #         jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            
+            # boot = self.bootstrapping(I_t, self.LUT_sigmoid)
+            # sig_i = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
+            #         jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            
+            # boot = self.bootstrapping(C_t, self.LUT_tanh)
+            # tanh_c = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
+            #         jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
+            
+            # boot = self.bootstrapping(O_t, self.LUT_sigmoid)
+            # sig_o = [jnp.concat([boot[0] for _ in range(self.n_lut)],axis=0), 
+            #         jnp.concat([boot[1] for _ in range(self.n_lut)],axis=0)]
 
 
             
