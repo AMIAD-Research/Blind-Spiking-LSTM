@@ -32,7 +32,7 @@ t = 2**9
 degree=2**11
 B = 1000
 L = 1
-n_keyswitch_bootstrapping = 801
+n_keyswitch_bootstrapping = 804
 beta = 2
 l=64
 q = float(beta**l)
@@ -212,8 +212,8 @@ boot = cuboot_merge(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],
 boot[1].block_until_ready()
 boot[0].block_until_ready()
 boostrapping_time = 0
-
-for _ in range(100):
+n_test = 1
+for _ in range(n_test):
     start = time.time()
     boot = cuboot_merge(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"]
             ,dict_params_lut["degree"],collapse, all_rot_possible_fourier,1)
@@ -236,8 +236,8 @@ else:
     print(Fore.RED + "Boostratpping with collapse Not OK")
     print(Fore.RED + f"Error {jnp.abs(a - b.flatten()).mean()}")
 
-print(Fore.YELLOW + f"Bootstrapping with collapse compute time : {boostrapping_time/100}")
-print(Fore.YELLOW + f"Bootstrapping with collapse compute time amortized: {boostrapping_time/(B*100)}")
+print(Fore.YELLOW + f"Bootstrapping with collapse compute time : {boostrapping_time/n_test}")
+print(Fore.YELLOW + f"Bootstrapping with collapse compute time amortized: {boostrapping_time/(B*n_test)}")
 print()
 
 breakpoint()
