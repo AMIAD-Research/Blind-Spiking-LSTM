@@ -116,6 +116,7 @@ class HeavysideBoostrapper:
 
 
 
+
     def __call__(self, h:Ciphertext, encrypted_LUT:Ciphertext):
         """This function applies the bootstrapping function. Generally this is a Relu function, but it could also be a sigmoid or other.
 
@@ -145,7 +146,10 @@ class HeavysideBoostrapper:
         return y1_boot
     
     def cuboot(self,h,encrypted_LUT):
+
         c_lwe_ks = vmap(key_switch_LWE,(None,0,None))(self.key_switching_key_bs, h, self.dict_params_ks_LWE)
+
+
         y1_boot = cuboot_merge(c_lwe_ks, encrypted_LUT, self.bootstrapping_key,
                                                             self.dict_params_lut["q"],
                                                             self.dict_params_lut["beta_bs"],
@@ -154,6 +158,7 @@ class HeavysideBoostrapper:
                                                             self.collapse,
                                                             self.all_rot_possible_fourier,
                                                             self.n_lut)
+
         return y1_boot
 
 

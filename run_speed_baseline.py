@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 os.environ['XLA_FLAGS'] = (
@@ -35,7 +35,8 @@ import json
 import time
 from nn_jax.HF_ds import get_embedding_model, get_datasets
 from nn_tfhe.activation import HeavysideBoostrapper, ReluBoostrapper
-from nn_tfhe.Spike_LSTM import CipherSpikeLSTM, CipherMLP
+from nn_tfhe.Spike_LSTM import CipherMLP
+from nn_tfhe.LSTM_baseline import CipherLSTM
 from nn_tfhe.utils_spike import *
 import jax
 jax.config.update("jax_enable_x64", True)
@@ -59,25 +60,55 @@ with open("conf_sst2.json") as f:
         config = json.load(f)
 
 
-embeddings_model = get_embedding_model(config)
+
 hidden_dim = config["hidden_dim"]
-task = config["task"]
 input_dim = config["input_dim"]
 n_lut = config["n_lut"]
-model = SpikeLSTMModel(input_dim, hidden_dim,task,0.3,n_lut,nnx.Rngs(1))
-datasets = get_datasets(config)
-valset = datasets["validation"].with_format("jax")
+
+
+
 
 
 ###crypto setup
 sk, ksk_packing, galois_key, bsk, key_switching_key_bs = sample_crypto_keys(seed)
-#plain_model = load_model(f"ckpts_lstm_spike/checkpoints_{config["name"]}_{hidden_dim}_seed_{seed}", model)
-plain_model = model
-_, _, sf, si, so, s_head1, s_out = get_boundaries(plain_model,valset.iter(batch_size=1024),task,embeddings_model)
-W_f, W_i, W_o, W_head1, W_out = get_linears(plain_model,sf,si,so,s_head1,s_out)
-#breakpoint()
-lut_f, lut_i, lut_o = get_lut(plain_model,sf,si,so)
-heavyBS, reluBS = get_tfhe_activation(bsk,key_switching_key_bs,ksk_packing,galois_key,s_head1,n_lut)
+
+###Linear instanciation
+zeros_cell = jnp.zeros((input_dim,hidden_dim))
+zeros_mlp1 = jnp.zeros((hidden_dim,hidden_dim))
+zeros_out = jnp.zeros((hidden_dim,1))
+linear_cell = Linear(hidden_dim, dict_params, jnp.ones(hidden_dim)*q/(4*beta_x))
+linear_cell.set_weights(zeros_cell, jnp.zeros(hidden_dim))
+W_f = linear_cell
+W_i = linear_cell
+W_c = linear_cell
+W_o = linear_cell
+
+W_head1 = Linear(hidden_dim, dict_params, jnp.ones(hidden_dim)*q/(4*beta_x))
+W_head1.set_weights(zeros_mlp1, jnp.zeros(hidden_dim))
+
+
+W_out  = Linear(hidden_dim, dict_params, jnp.ones(1)*q/(4*beta_x))
+W_out .set_weights(zeros_out, jnp.zeros(1))
+
+
+
+###Bootstrapper
+reluBS = ReluBoostrapper(
+                                        bootstrapping_key = bsk,
+                                        key_switching_key_bs = key_switching_key_bs,
+                                        ksk_packing = ksk_packing,
+                                        dict_params = dict_params,
+                                        dict_params_lut = dict_params_lut,
+                                        dict_params_ks_LWE = dict_params_ks_LWE,
+                                        dict_params_packing = dict_params_packing,
+                                        collapse = collapse,
+                                        all_rot_possible_fourier = all_rot_possible_fourier,
+                                        beta_x = beta_x,
+                                        s_head = jnp.ones(hidden_dim)*8
+        )
+
+
+
 key = jax.random.PRNGKey(seed)
 cipher_head = CipherMLP(
                                 dict_params = dict_params,
@@ -89,31 +120,24 @@ cipher_head = CipherMLP(
 )
 
     
-cipher_lstm = CipherSpikeLSTM(
+cipher_lstm = CipherLSTM(
                                 dict_params = dict_params,
                                 dict_params_lut = dict_params_lut,
                                 input_dim=input_dim,
                                 hidden_dim = hidden_dim,
                                 max_len = config["max_length"],
                                 linear_f = W_f,
+                                linear_c = W_c,
                                 linear_i = W_i,
                                 linear_o = W_o,
-                                heavyBS = heavyBS,
+                                heavyBS = reluBS,
                                 n_lut = n_lut,
-                                lut_f = lut_f,
-                                lut_i = lut_i,
-                                lut_o = lut_o,
                                 beta_x = beta_x
 )
 max_len = config["max_length"]
-batch_size = 16
+batch_size = 1
 n_test = 5
 runtime_tot = 0
-from jax.profiler import ProfileOptions
-
-opts = ProfileOptions()
-opts.host_tracer_level = 1      # 0 = rien, 2 = défaut, 3 = verbeux
-opts.python_tracer_level = 0 
 for i in tqdm(range(n_test)):
         
     seq_len = np.ones(batch_size).astype(int)*max_len
@@ -134,20 +158,10 @@ for i in tqdm(range(n_test)):
     H_t = H_t[0][jnp.arange(x.shape[0]), seq_len-1], H_t[1][jnp.arange(x.shape[0]), seq_len-1]
 
     out = vmap(cipher_head,0)(H_t) 
-    y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
+    y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)).flatten()
     y_c.block_until_ready()
     if i != 0:
         runtime_tot += time.time() - start
-
-    if i==n_test-1:
-        with jax.profiler.trace("jax_trace", profiler_options=opts):
-            ((H_t, C_t), (out_H_new, out_C_new)) = vmap(cipher_lstm,(0,0))(X_cipher, seq_len)
-            H_t = vmap(vmap(rotate_ciphertext,(0,None)),(0,None))(out_H_new,-input_dim)
-            H_t = H_t[0][jnp.arange(x.shape[0]), seq_len-1], H_t[1][jnp.arange(x.shape[0]), seq_len-1]
-        
-            out = vmap(cipher_head,0)(H_t) 
-            y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
-            y_c.block_until_ready()
 
 print(f"log Beta_bs : {jnp.log2(beta_bs)}")
 print(f"l_bs : {l_bs}")
