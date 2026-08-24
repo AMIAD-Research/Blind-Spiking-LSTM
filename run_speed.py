@@ -109,11 +109,7 @@ max_len = config["max_length"]
 batch_size = 16
 n_test = 5
 runtime_tot = 0
-from jax.profiler import ProfileOptions
 
-opts = ProfileOptions()
-opts.host_tracer_level = 1      # 0 = rien, 2 = défaut, 3 = verbeux
-opts.python_tracer_level = 0 
 for i in tqdm(range(n_test)):
         
     seq_len = np.ones(batch_size).astype(int)*max_len
@@ -139,15 +135,6 @@ for i in tqdm(range(n_test)):
     if i != 0:
         runtime_tot += time.time() - start
 
-    if i==n_test-1:
-        with jax.profiler.trace("jax_trace", profiler_options=opts):
-            ((H_t, C_t), (out_H_new, out_C_new)) = vmap(cipher_lstm,(0,0))(X_cipher, seq_len)
-            H_t = vmap(vmap(rotate_ciphertext,(0,None)),(0,None))(out_H_new,-input_dim)
-            H_t = H_t[0][jnp.arange(x.shape[0]), seq_len-1], H_t[1][jnp.arange(x.shape[0]), seq_len-1]
-        
-            out = vmap(cipher_head,0)(H_t) 
-            y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
-            y_c.block_until_ready()
 
 print(f"log Beta_bs : {jnp.log2(beta_bs)}")
 print(f"l_bs : {l_bs}")
