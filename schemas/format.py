@@ -1,5 +1,4 @@
-from typing import Tuple,List
-import jax.numpy as jnp
+from typing import List
 from jax import Array
 
 Ciphertext = List[Array]

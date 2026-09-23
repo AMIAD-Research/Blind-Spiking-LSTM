@@ -69,37 +69,6 @@ def get_boundaries(plain_model, dataset, task, embeddings_model):
       return get_max_values(plain_model, (x, seq_len,_),task)
 
 
-def get_cipher_linear(plain_model, dataset, task, embeddings_model,
-                      dict_params, beta_w):
-      _, _, sf, si, so, s_head1, s_out = get_boundaries(plain_model,dataset,task,embeddings_model)
-      
-      w_f = plain_model.lstm.linearf.get_norm_kernel()
-      b_f = plain_model.lstm.linearf.linear.bias
-      W_f = Linear(plain_model.hidden_dim,dict_params,beta_w/sf)
-      W_f.set_weights(w_f,b_f)
-
-      w_i = plain_model.lstm.lineari.get_norm_kernel()
-      b_i = plain_model.lstm.lineari.linear.bias
-      W_i = Linear(plain_model.hidden_dim,dict_params,beta_w/si)
-      W_i.set_weights(w_i,b_i)
-
-      w_o = plain_model.lstm.linearo.get_norm_kernel()
-      b_o = plain_model.lstm.linearo.linear.bias
-      W_o = Linear(plain_model.hidden_dim,dict_params,beta_w/so)
-      W_o.set_weights(w_o,b_o)
-
-      w_head1 = plain_model.head.layers[0].get_norm_kernel()
-      b_head1 = plain_model.head.layers[0].linear.bias
-      W_head1 = Linear(plain_model.hidden_dim,dict_params,beta_w/s_head1)
-      W_head1.set_weights(w_head1,b_head1)
-
-      w_out = plain_model.head.layers[2].get_norm_kernel()
-      b_out = plain_model.head.layers[2].linear.bias
-      W_out = Linear(plain_model.hidden_dim,dict_params,beta_w/s_out)
-      W_out.set_weights(w_out,b_out)
-      return W_f, W_i, W_o, W_head1, W_out, s_head1, s_out
-
-
 def get_plain_LUT(degree_lut:int,
                   n_lut:int,
                   index:int,

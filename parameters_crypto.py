@@ -8,9 +8,9 @@ Q = q
 degree_lut = 2**11
 t = degree_lut
 degree = 2**11
-n_keyswitch_bootstrapping = 840
-sigma = 2**22.6
-sigma_lut = 2**22.6
+n_keyswitch_bootstrapping = 702
+sigma = 2**17.0
+sigma_lut = 2**17.0
 sigma_lwe = 2**48.6
 
 ###packing monomial

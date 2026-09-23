@@ -48,7 +48,15 @@ python noise_study.py --config conf_mrpc.json
 In order to run this speed test, you need to have trained on a classifier on the SST-2 dataset.
 ```bash
 python run_speed.py
+python run_speed_baseline.py
 ```
+
+### Microbenchmarking
+```bash
+python tracer_LSTM.py
+python tracer_BSLSTM.py
+```
+
 
 ### No Many LUT ablation
 ```bash

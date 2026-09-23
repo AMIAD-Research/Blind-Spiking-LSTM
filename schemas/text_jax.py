@@ -3,10 +3,9 @@ from jax import vmap
 import jax.numpy as jnp
 from typing import Tuple
 from schemas.format import Ciphertext,Plaintext,RGSW
-from schemas.polynomial_jax import fft_polynomial_multiply, decomposition, GLEV_polynomial, centered_mod, coef_rotation,fft_product_twice, partial_fft_product,jax_inversefourier, jax_fourier, apply_automorphism
+from schemas.polynomial_jax import fft_polynomial_multiply, decomposition, centered_mod, coef_rotation, fft_product_twice, partial_fft_product, jax_inversefourier, jax_fourier, apply_automorphism
 from functools import partial
 import math
-import numpy as np
 jax.config.update('jax_enable_x64', True)
 
 @jax.jit
@@ -42,20 +41,6 @@ def sum_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,q:i
         return ciphertext1[0]+ciphertext2[0], ciphertext1[1]+ciphertext2[1]
 
 
-@partial(jax.jit, static_argnames=['q'])
-def diff_ciphertext_ciphertext(ciphertext1:Ciphertext, ciphertext2:Ciphertext,q:int)->Ciphertext:
-    """This function computes the difference between 2 ciphertexts.
-
-    Args:
-        ciphertext1 (Ciphertext): Ciphertext1
-        ciphertext2 (Ciphertext): Ciphertext2
-        q (int): Modulus of the ciphertext space
-
-    Returns:
-        Ciphertext: ciphertext1 - ciphertext2
-    """
-    return centered_mod(ciphertext1[0]-ciphertext2[0],q),centered_mod(ciphertext1[1]-ciphertext2[1],q)
-
 @partial(jax.jit,static_argnames=["q"])
 def centered_mod_ciphertext(ciphertext:Ciphertext,q:int):
     """This function returns the centered modulo q of an encrypted message
@@ -69,20 +54,6 @@ def centered_mod_ciphertext(ciphertext:Ciphertext,q:int):
     """
     return centered_mod(ciphertext[0],q),centered_mod(ciphertext[1],q)
 
-
-@partial(jax.jit, static_argnames=['stay_fft'])
-def multiply_plaintext_plaintext(plaintext1:Plaintext, plaintext2:Plaintext,  stay_fft=False)->Plaintext:
-    """Multiplication between two cleartext messages.
-
-    Args:
-        plaintext1 (Plaintext): _description_
-        plaintext2 (Plaintext): _description_
-        degree (int): _description_
-
-    Returns:
-        Plaintext: _description_
-    """
-    return fft_polynomial_multiply(plaintext1,plaintext2,stay_fft)
 
 @partial(jax.jit, static_argnames=['degree','stay_fft','ciphertext_fft'])
 def multiply_plaintext_ciphertext(plaintext:Plaintext,ciphertext:Ciphertext,degree:int, stay_fft:bool=False, ciphertext_fft:bool=False)->Ciphertext:
@@ -198,26 +169,6 @@ def gadget_product(glev:Ciphertext, decomp:Plaintext,  degree:int, glev_fft:bool
 
 
 
-@partial(jax.jit, static_argnames=['beta','l','q'])
-def get_GLEV_ciphertext(c:Ciphertext,beta:int,l:int, q:int)->Ciphertext:
-    """This function takes a ciphertext and returns its associated GLEV.
-
-    Args:
-        c (Ciphertext): Ciphertext, by default in RLWE
-        beta (int): Decomposition base
-        l (int): Maximum decomposition power
-        q (int): Modulus of the ciphertext
-        degree (int): Degree of the ciphertext
-
-    Returns:
-        Ciphertext: GLEV associated with the ciphertext c
-    """
-    public_key = c[0]
-    b = c[1]
-    glev_public_key = GLEV_polynomial(public_key,beta,l,q)
-    glev_b = GLEV_polynomial(b,beta,l,q)
-    return glev_public_key,glev_b
-
 @partial(jax.jit, static_argnames=['current_modulus','new_modulus'])
 def modulus_switch(c:Ciphertext,current_modulus:int,new_modulus:int):
     """This function switches from one modulus to another.
@@ -286,57 +237,6 @@ def packing(ciphertexts:Ciphertext,KSP:Ciphertext,
     result_public_key = - jnp.sum(second_term[0],axis=0)
     result_b = packed_b - jnp.sum(second_term[1],axis=0)
     return centered_mod(result_public_key,q),centered_mod(result_b,q)
-
-@partial(jax.jit, static_argnames=['q', 'beta', 'l', 'degree'])
-def packing_optimized(ciphertexts: tuple, KSP: jnp.ndarray, 
-                      q: int, beta: int, l: int, degree: int):
-    """
-    Memory-optimized version of LWE -> RLWE packing.
-    """
-    public_keys, bs = ciphertexts[0], ciphertexts[1]
-    n_lwes = bs.shape[0]
-    n_lwe_dim = public_keys.shape[1]
-
-    # 1. Using jnp.pad instead of .at[].set() or jnp.zeros()
-    bs_squeezed = jnp.squeeze(bs, axis=-1)
-    packed_b = jnp.pad(bs_squeezed, (0, degree - n_lwes))
-
-    # 2. Transposition and idiomatic padding
-    public_key_polynomial = jnp.transpose(public_keys)
-    if n_lwes < degree:
-        # Pad only the 'degree' dimension (axis 1)
-        public_key_polynomial = jnp.pad(public_key_polynomial, ((0, 0), (0, degree - n_lwes)))
-
-    # 3. Replacing vmap with jax.lax.scan to accumulate on the fly
-    # This avoids materializing the (n_lwe_dim, degree, l) tensor in memory
-    def scan_body(carry, elements):
-        acc_a, acc_b = carry
-        ksp_i, pk_i = elements
-
-        # On-the-fly decomposition for a single LWE (size: degree)
-        pk_i_decomp = decomposition(pk_i, beta, l, q)
-
-        # Gadget product for this component
-        res_a, res_b = gadget_product(ksp_i, pk_i_decomp, degree)
-
-        # Accumulation
-        return (acc_a + res_a, acc_b + res_b), None
-
-    # Initialization of the accumulators (RLWE polynomials of size 'degree')
-    init_carry = (
-        jnp.zeros(degree, dtype=public_keys.dtype),
-        jnp.zeros(degree, dtype=public_keys.dtype)
-    )
-
-    # Execution of the scan along the LWE dimension
-    final_carry, _ = jax.lax.scan(scan_body, init_carry, (KSP, public_key_polynomial))
-
-    # 4. Finalisation
-    result_public_key = -final_carry[0]
-    result_b = packed_b - final_carry[1]
-
-    return centered_mod(result_public_key, q), centered_mod(result_b, q)
-
 
 @partial(jax.jit,static_argnames=['q','beta','l','degree'])
 def lwe_to_RLWE(lwe:Ciphertext,KSP:Ciphertext,
@@ -537,54 +437,6 @@ def multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[R
 
 
     
-@partial(jax.jit,static_argnames=['q','beta','l','degree','collapse','n_lut'])
-def many_LUT_multiply_seq_monomial(ciphertext:Ciphertext,public_key:jnp.array,BSK:Tuple[RGSW],
-                          q:int,beta:int,l:int,degree:int,collapse:int, all_rot_fft:jnp.array, n_lut:int)->Ciphertext:
-    """This function performs the sequential multiplication in the encrypted space of M by X^{sum(a_i*s_i)}.
-
-    Args:
-        ciphertext (Ciphertext): Ciphertext in RLWE
-        public_key (jnp.array): Public key corresponding to the a_i
-        BSK (Tuple[RGSW]): Bootstrapping key corresponding to the messages encrypted as RGSW(s_i)
-        q (int): Modulus of the ciphertext space
-        beta (int): Decomposition base
-        l (int): Maximum decomposition power
-        degree (int): Degree of the ciphertext polynomials
-
-    Returns:
-        Ciphertext: Encrypted message shifted by sum(a_i*s_i)
-    """
-    n = public_key.shape[-1]
-
-    n_iter = n//collapse
-    ct_init = jnp.stack(ciphertext) if isinstance(ciphertext, tuple) else ciphertext
-    kronecker_matrix = all_binary_vectors(collapse)
-    pk_reshaped = public_key.reshape(n_iter, collapse)
-    all_rotations_val = jnp.dot(pk_reshaped, kronecker_matrix.T)
-    all_rotations_indices = (jnp.round(jnp.round(2 * degree * all_rotations_val / q)/n_lut)*n_lut).astype(jnp.int32)%(2*degree)
-    bsk_array = BSK
-    shape = list(bsk_array.shape)
-    shape[3] = n_iter
-    shape.insert(4, 2**collapse) # We split axis 3 into (n_iter, chunk_size)
-    bsk_reshaped = bsk_array.reshape(shape)
-    bsk_reshaped = jnp.permute_dims(bsk_reshaped,(3,0,2,1,4,5))
-
-    def step(ct_in, scan_input):
-    #     # carry is not used; set to None or any placeholder
-        bsk_chunk, rot_indices = scan_input
-        dec = decomposition(ct_in, beta, l, q)
-        dec_fft = jax_fourier(dec)
-        sum_rgsw = jnp.einsum('abcmd, md -> abcd', bsk_chunk, all_rot_fft[rot_indices])
-
-        # # We apply the BSK
-        prod = jnp.einsum('abcd, bcd -> ad', sum_rgsw, dec_fft)
-        ct_next = centered_mod(jax_inversefourier(prod),q)
-        return ct_next, None
-    
-    ct_final, _ = jax.lax.scan(step,ct_init,(bsk_reshaped, all_rotations_indices),n_iter)
-    return ct_final
-
-
 def all_binary_vectors(m: int):
     """
     Generates a matrix (3^m, m) containing all the combinations

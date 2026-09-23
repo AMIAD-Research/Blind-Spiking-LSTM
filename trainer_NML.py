@@ -1,6 +1,6 @@
 import os
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
-
+os.environ["CUDA_VISIBLE_DEVICES"]= "0"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 os.environ['XLA_FLAGS'] = (
