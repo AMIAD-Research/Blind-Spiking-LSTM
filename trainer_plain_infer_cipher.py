@@ -1,6 +1,6 @@
 import os
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 os.environ['XLA_FLAGS'] = (
@@ -12,6 +12,7 @@ import jax.numpy as jnp
 import jax
 jax.config.update("jax_enable_x64", True)
 import numpy as np
+from tqdm import tqdm
 from nn_jax.utils import save_model, process_batch
 from flax import nnx
 import jax
@@ -180,18 +181,18 @@ def main(config):
 
     ###cipher inference
     if task == "Single Sentence":
-        batch_size = 64
-    else:
         batch_size = 32
+    else:
+        batch_size = 16
     max_len = config["max_length"]
     li_logits_c = []
     
     key = jax.random.PRNGKey(seed)
     key = jax.random.split(key)[0]
-    #breakpoint()
-    for idx,batch in enumerate(testset.iter(batch_size=batch_size)):
+
+    for idx,batch in enumerate(tqdm(testset.iter(batch_size=batch_size), total=-(-len(testset)//batch_size), desc="Cipher inference")):
         x, seq_len, _ = process_batch(batch, task)
-        x = get_emb(embeddings_model,x)        
+        x = get_emb(embeddings_model,x)
         # _,_,h_all,_ = jax.vmap(plain_model.lstm,in_axes=0)(x)
         # hf = h_all[jnp.arange(x.shape[0]),seq_len-1]
 
@@ -202,20 +203,14 @@ def main(config):
         X_cipher = vmap(vmap(encrypt,(0,None,None,0)),(0,None,None,0))(X_emb_poly, sk, dict_params, key)
         key = jax.random.split(key[0,0])[0]
         ((_, _), (out_H_new, _)) = vmap(cipher_lstm,(0,0))(X_cipher, seq_len)
+
         if task == "Single Sentence":
             H_t = vmap(vmap(rotate_ciphertext,(0,None)),(0,None))(out_H_new,-input_dim)
             H_t = H_t[0][jnp.arange(x.shape[0]), seq_len-1], H_t[1][jnp.arange(x.shape[0]), seq_len-1]
             h_t = vmap(decrypt_quantization,(0,None,None,None))(H_t,sk, dict_params, beta_x)[:,:hidden_dim]
             out = vmap(cipher_head,0)(H_t)
+
         else:
-            # size = x.shape[0]//2
-            # first_sentence = hf[:size]
-            # second_sentence = hf[size:]
-            # h_final = jnp.concat([first_sentence,second_sentence],axis=-1)
-            # y_hat = plain_model.head(h_final).flatten()
-
-
-
             n_sample = x.shape[0]//2
             first_sentence_cipher = [out_H_new[0][:n_sample], out_H_new[1][:n_sample]]
             second_sentence_cipher = [out_H_new[0][n_sample:], out_H_new[1][n_sample:]]
@@ -230,8 +225,9 @@ def main(config):
             sentences = vmap(sum_ciphertext_ciphertext,(0,0,None))(first_sentence_cipher,second_sentence_cipher,q)
             sentence_dec = vmap(decrypt_quantization,(0,None,None,None))(sentences, sk, dict_params,beta_x)[:,:2*hidden_dim]
             out = vmap(cipher_head,0)(sentences)
+        
         y_c = (vmap(vmap(decrypt_LWE_quantization,(0,None,None,None)),(0,None,None,None))(out,sk,dict_params,beta_x*beta_w)*s_out).flatten()
-        #breakpoint()
+
         logits_c = jnp.where(y_c>0,1,0)
         li_logits_c.append(logits_c)
 

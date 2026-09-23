@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-import numpy as np
 from functools import partial
 import time
 jax.config.update('jax_enable_x64', True)

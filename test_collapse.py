@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"]="2"
 os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from schemas.RLWE_jax import sample_sk, encrypt, get_delta, decrypt, key_switch, bootstrapping, cuboot,cuboot_merge, decrypt_quantization, BR
@@ -30,19 +31,19 @@ init(autoreset=True)
 
 t = 2**9
 degree=2**11
-B = 1000
+B =  128*128
 L = 1
-n_keyswitch_bootstrapping = 804
+n_keyswitch_bootstrapping = 702
 beta = 2
 l=64
 q = float(beta**l)
 beta_ks = 2**2
 l_ks= 10
-l_bs = 2
-beta_bs = 2**13
-sigma = 2**21
-sigma_lut = 2**21
-sigma_lwe = 2**48.8
+l_bs = 1
+beta_bs = 2**18
+sigma = 2**17
+sigma_lut = 2**17
+sigma_lwe = 2**48.6
 seed = 1
 collapse = 3
 key = jax.random.PRNGKey(seed)
@@ -164,26 +165,22 @@ print("Boostrapping all with collapse")
 
 
 c_lwe_ks = vmap(key_switch_LWE,(None,0,None))(key_switching_key_bs,c_lwe,dict_params_ks_LWE)
-# #Bootstrapping
 
-print("JAX")
-#with jax.profiler.trace("jax-trace/boot",create_perfetto_link=True):
-#jax.profiler.start_trace("jax-trace/boot")
+
+print("JAX kernel")
+
 start = time.time()
 boot = vmap(bootstrapping,in_axes=(0,0,None,None,None,None,None,None,None))(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"]
                                                                                                                     ,dict_params_lut["degree"],collapse, all_rot_possible_fourier)
 boot[1].block_until_ready()
 boot[0].block_until_ready()
 boostrapping_time = time.time() - start
-# breakpoint()
+
 
 
 f_m1 = (vmap(decrypt_LWE_quantization,(0,None,None,None))(boot,sk_lut,dict_params_lut, beta_x)).flatten()
 
-#breakpoint()
 
-
-#a = lut_fn(m_1[:,0].flatten())
 a = jnp.where(m1[:,0]>=0 , 1, 0)
 b = f_m1.flatten()
 if jnp.abs(a - b.flatten()).mean() <=0.5:
@@ -206,13 +203,13 @@ print()
 
 
 
-print("Cuda")
+print("Cuda kernel")
 boot = cuboot_merge(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"]
             ,dict_params_lut["degree"],collapse, all_rot_possible_fourier,1)
 boot[1].block_until_ready()
 boot[0].block_until_ready()
 boostrapping_time = 0
-n_test = 1
+n_test = 10
 for _ in range(n_test):
     start = time.time()
     boot = cuboot_merge(c_lwe_ks, encrypted_LUT , bsk_ordered, dict_params_lut["q"],dict_params_lut["beta_bs"],dict_params_lut["l_bs"]
@@ -240,6 +237,5 @@ print(Fore.YELLOW + f"Bootstrapping with collapse compute time : {boostrapping_t
 print(Fore.YELLOW + f"Bootstrapping with collapse compute time amortized: {boostrapping_time/(B*n_test)}")
 print()
 
-breakpoint()
 
 

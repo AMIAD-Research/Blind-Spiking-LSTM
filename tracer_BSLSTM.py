@@ -1,20 +1,6 @@
-"""
-Benchmark d'un pas de temps du CipherSpikeLSTM, avec dimension de batch.
-
-Principe : on reconstruit a la main le corps de `scan_step`, on capture tous les
-intermediaires reels (bonnes shapes, bon niveau de bruit), puis on chronometre
-chaque sous-operation jittee separement.
-
-Toutes les sous-ops sont vmappees sur un axe de batch de tete (les LUT et les
-poids restent partages, in_axes=None).
-
-Usage:
-    python bench_timestep.py --batch 4
-"""
-
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["XLA_FLAGS"] = "--xla_gpu_triton_gemm_any=True "
@@ -131,7 +117,6 @@ def build(conf_path, seed=0):
 
 
 def make_input(config, sk, batch, seed=0):
-    """Chiffre `batch` sequences aleatoires -> X_cipher de shape (B, L, ...)."""
     L, input_dim = config["max_length"], config["input_dim"]
     n = batch * L
     key = jax.random.PRNGKey(seed)
@@ -145,7 +130,6 @@ def make_input(config, sk, batch, seed=0):
 
 
 def warm_carry(lstm, X_cipher, config, step):
-    """Etat (H, C) batche apres `step` pas reels : bruit representatif."""
     seq_len = np.ones(config["max_length"]).astype(int)
     run = jax.jit(vmap(lambda X: lstm(X, seq_len)))
     (_, (H_hist, C_hist)) = run(X_cipher)
@@ -166,13 +150,11 @@ def LUT(model, C_lwe_reshape):
 
 @partial(jax.jit, static_argnames=["model"])
 def PBS(model, input_boot, lut_boot):
-    """LUT batchee (une par echantillon)."""
     return vmap(model.heavyBS.cuboot)(input_boot, lut_boot)
 
 
 @partial(jax.jit, static_argnames=["model"])
 def PBS_shared_lut(model, input_boot, lut_boot):
-    """LUT partagee entre les echantillons (in_axes=None)."""
     return vmap(model.heavyBS.cuboot, (0, None))(input_boot, lut_boot)
 
 

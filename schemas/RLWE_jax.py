@@ -1,15 +1,13 @@
-from schemas.polynomial_jax import centered_mod, exact_polynomial_multiply, fft_polynomial_multiply, GLEV_polynomial, decomposition, apply_automorphism, jax_fourier
-from schemas.text_jax import gadget_product,sum_ciphertext_ciphertext, modulus_switch,blind_rotate, sample_extract, all_binary_vectors, rotate_ciphertext
+from schemas.polynomial_jax import centered_mod, fft_polynomial_multiply, GLEV_polynomial, decomposition, apply_automorphism, jax_fourier
+from schemas.text_jax import gadget_product, sum_ciphertext_ciphertext, blind_rotate, sample_extract, all_binary_vectors, rotate_ciphertext
 from schemas.format import Ciphertext,Plaintext,RGSW
 import jax.numpy as jnp
 from functools import partial
 import numpy as np
-from typing import Tuple
 import jax
 from jax import vmap
 import math
 from cuTFHE.multiply import multiply_seq_monomial as cuTFHE_multiply_seq_monomial
-import time
 jax.config.update('jax_enable_x64', True)
 
 
@@ -126,32 +124,6 @@ def key_switch(key_switching_key:Ciphertext, ciphertext:Ciphertext,dict_params:d
 
 
  
-def get_RGSW(sk:jnp.ndarray, polynomial:Plaintext, dict_params:dict, key:jnp.ndarray)->RGSW:
-    """This function computes the RGSW of a plaintext
-
-    Args:
-        sk (jnp.ndarray): Private key
-        polynomial (Plaintext): Plaintext to transform into RGSW
-        dict_params (dict): Dictionary grouping the encryption's meta-parameters
-
-    Returns:
-        RGSW: _description_
-    """
-    q = dict_params["q"]
-    beta = dict_params["beta_rgsw"]
-    l = dict_params["l_rgsw"]
-    ##Right part of RGSW
-    right_key = jax.random.split(key,(l))
-    poly_glev = GLEV_polynomial(polynomial,beta,l,q)
-    encrypted_poly_glev = vmap(encrypt,in_axes=(0,None,None,0))(poly_glev,sk,dict_params,right_key)
-    ##Left part of RGSW
-    left_key = jax.random.split(key,(l))
-    sk_times_poly = fft_polynomial_multiply(-sk,polynomial)
-    sk_times_poly_glev = centered_mod(GLEV_polynomial(sk_times_poly,beta,l,q),q)
-    encrypted_sk_times_poly_glev= vmap(encrypt,in_axes=(0,None,None,0))(sk_times_poly_glev,sk,dict_params, left_key)
-    return encrypted_sk_times_poly_glev, encrypted_poly_glev
-
-
 def get_boostrapping_key(sk_lut:jnp.ndarray, sk_lwe:jnp.ndarray, dict_params:dict,key:jnp.ndarray)->RGSW:
     """This function computes the bootstrapping key
 
@@ -283,21 +255,6 @@ def bootstrapping(lwe_ciphertext:Ciphertext,LUT:Ciphertext,BSK:RGSW,
     else:
         index = jnp.arange(n_lut)
         return vmap(sample_extract,(None,0))(rotation,index)
-
-
-
-def get_ksk(sk_poly:jnp.array, sk_lwe:jnp.ndarray,dict_params,key:jnp.ndarray):
-    l = dict_params["l"]
-    beta = dict_params["beta_ks"]
-    q = dict_params["q_ks"]
-    poly = jnp.zeros((sk_lwe.shape[-1],sk_poly.shape[-1]))
-    poly = poly.at[:,0].set(sk_lwe)
-    right_key = jax.random.split(key,(sk_lwe.shape[-1],l))
-    right_part_rgsw_encrypted = centered_mod(
-                    vmap(GLEV_polynomial,in_axes=(0,None,None,None,None))(poly,beta,l,q),q
-    )
-    glev = vmap(vmap(encrypt,in_axes=(0,None,None,0)),in_axes=(0,None,None,0))(right_part_rgsw_encrypted,sk_poly,dict_params,right_key)
-    return glev
 
 
 

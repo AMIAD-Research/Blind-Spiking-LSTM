@@ -8,10 +8,10 @@ Q = q
 degree_lut = 2**11
 t = degree_lut
 degree = 2**11
-n_keyswitch_bootstrapping = 690
+n_keyswitch_bootstrapping = 702
 sigma = 2**17.0
 sigma_lut = 2**17.0
-sigma_lwe = 2**49.0
+sigma_lwe = 2**48.6
 
 ###packing monomial
 beta_ks_monomial = 2**2
@@ -27,8 +27,8 @@ beta_ks_lwe = 2*1
 l_ks_lwe = 20
 
 ##BS
-beta_bs = 2**17
-l_bs = 1
+beta_bs = 2**13
+l_bs = 2
 collapse = 3
 
 dict_params = {
